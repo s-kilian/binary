@@ -503,7 +503,7 @@ Add.cond.p.NI <- function(df, n0, n1, delta){
       .,
       mutate(
         .,
-        cond.p = pFNCHypergeo(x0, n0, n1, s[1], 1/delta)
+        cond.p = BiasedUrn::pFNCHypergeo(x0, n0, n1, s[1], 1/delta)
       )
     ) %>%
     return()
@@ -525,7 +525,7 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   # Create list of p.values (test statistic) for every s
   p.value.list <- list()
   for (s in s.area) {
-    p.value.list[[s+1]] <- pFNCHypergeo(max(s-n1, 0):min(s, n0), n0, n1, s, 1/delta)
+    p.value.list[[s+1]] <- BiasedUrn::pFNCHypergeo(max(s-n1, 0):min(s, n0), n0, n1, s, 1/delta)
   }
   
   # Ordered data frame of p-values mapped to every s
