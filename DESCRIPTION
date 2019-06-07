@@ -12,3 +12,5 @@ LazyData: true
 Imports:
     tidyverse
     BiasedUrn
+Suggests: 
+    testthat
