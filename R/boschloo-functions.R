@@ -700,8 +700,8 @@ Calculate.exact.sample.size.NI <- function(alpha, delta, power, r = 1, p0, p1, s
   # Accuracy of calculating the critical value can be specified by size.acc.
   # Output: Sample sizes per group (n0, n1), nominal alpha and exact power.
   
-  if (p0 >= p1) {
-    stop("p1 has to be greater than p0.")
+  if (p1*(1-p0)/(p0*(1-p1)) <= delta) {
+    stop("OR(p1, p0) has to be greater than delta.")
   }
   
   # Estimate sample size with approximate formula
@@ -816,8 +816,8 @@ Calculate.exact.Fisher.sample.size.NI <- function(alpha, delta, power, r = 1, p0
   # level alpha, power, allocation ratio r = n1/n0 and true rates p0, p1.
   # Accuracy of calculating the critical value can be specified by size.acc.
   # Output: Sample sizes per group (n0, n1) and exact power.
-  if (p0 >= p1) {
-    stop("p1 has to be greater than p0.")
+  if (p1*(1-p0)/(p0*(1-p1)) <= delta) {
+    stop("OR(p1, p0) has to be greater than delta.")
   }
   
   # Estimate sample size with approximate formula
