@@ -547,7 +547,7 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   # value = alpha
   ordered.p.values %>%
     group_by(s) %>%
-    summarise(c = max(p.value[p.value <= alpha])) %>%
+    summarise(c = suppressWarnings(max(p.value[p.value <= alpha]))) %>%
     arrange(s) %>%
     pull(c) ->
     start.bounds
@@ -618,14 +618,14 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
       max.size
   }
   # Go one step back
-  bounds[s.vec[i]+1] <- p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max()
+  bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
   i <- i-1
   
   # If two or more possible results have the same p-values, they have to fall
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
   while(p.values[i-1] == p.values[i]){
-    bounds[s.vec[i]+1] <- p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max()
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
     i <- i-1
   }
   
@@ -649,10 +649,10 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
     # Shrink rejection region if size is too high
     while (max.size > alpha) {
       # Reduce rejection region
-      bounds[s.vec[i]+1] <- p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max()
+      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
       i <- i-1
       while(p.values[i-1] == p.values[i]){
-        bounds[s.vec[i]+1] <- p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max()
+        bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
         i <- i-1
       }
       # Compute maximum size
@@ -668,7 +668,7 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
   while(p.values[i-1] == p.values[i]){
-    bounds[s.vec[i]+1] <- p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max()
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
     i <- i-1
   }
   
