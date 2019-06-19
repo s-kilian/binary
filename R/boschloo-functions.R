@@ -557,14 +557,34 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   i <- start.index
   bounds <- start.bounds
   
+  # Help function to efficiently compute logarithmic binomial coefficient
+  logchoose <- function(o, u){
+    if(u > o){stop("u cannot be greater than o!")}
+    sum(log(seq_len(o-max(o-u, u))+max(o-u, u))) - sum(log(seq_len(min(o-u, u))))
+  }
+  
   # Help function to compute P(S=s) under constant odds ratio delta
   Compute.s.prob.vec <- function(p0){
     p1 <- 1/(1+(1-p0)/(delta*p0))
+    k.range <- 0:n0
+    sapply(
+      k.range,
+      function(y) logchoose(n0, y) - y*log(delta)
+    ) ->
+      add.1
+    s.minus.k.range <- 0:n1
+    sapply(
+      s.minus.k.range,
+      function(y) logchoose(n1, y)
+    ) ->
+      add.2
     sapply(
       s.area,
-      function(x) {
+      function(x){
         k <- max(x-n1, 0):min(x, n0)
-        sum(choose(n0, k) * choose(n1, x - k) * 1/delta^k) * (1-p0)^n0 * p1^x * (1-p1)^(n1-x)
+        help.val <- add.1[k+1] + add.2[x-k+1]
+        help.val <- help.val + n0*log(1-p0) + (n1-x)*log(1-p1) + x*log(p1)
+        sum(exp(help.val))
       }
     )
   }
