@@ -4,16 +4,16 @@
 ##                        comparison of two groups with binary endpoint.
 ##                 Input: none
 ##                Output: Functions:
-##                        Add.cond.p: Compute conditional p-values for every result
-##                        Raise.level: Find critical value for Fisher-Boschloo test
-##                        Compute.custom.reject.prob: Compute exact probability
-##                          of rejecting H0 for an arbitrary rejection region
+##                        teststat: Compute test statistic every result
+##                        critval: Find critical value for Fisher-Boschloo test
+##                        power_boschloo: Compute exact probability
+##                          of rejecting H_0 for an arbitrary rejection region
 ##                        Calculate.approximate.sample.size: for chi-square test
 ##                        Calculate.exact.sample.size: iteratively for Fisher-Boschloo test
 ##                        Calculate.exact.Fisher.sample.size: iteratively for
 ##                          Fisher's exact test
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2019-05-23
+##   Date of last update: 2019-06-26
 ##                Author: Samuel Kilian
 ##..............................................................................
 
@@ -21,43 +21,43 @@
 ## Functions ###################################################################
 ## Superiority #################################################################
 # Test problem:
-# H0: p1 <= p0
-# H1: p1 > p0
+# H_0: p_E <= p_C
+# H_1: p_E > p_C
 
-Add.cond.p <- function(df, n0, n1){
-  # Take data frame df with variable x0 and x1 representing all possible
-  # response pairs for group sizes n0 and n1 and add conditional fisher p-values
-  # for H0: p1 <= p0.
+teststat_boschloo <- function(df, n_C, n_E){
+  # Take data frame df with variable x_C and x_E representing all possible
+  # response pairs for group sizes n_C and n_E and add test statistic (conditional
+  # fisher p-values for H_0: p_E <= p_C).
   if (
-    n0+1 != df %>% pull(x0) %>% unique() %>% length() |
-    n1+1 != df %>% pull(x1) %>% unique() %>% length()
+    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
   ) {
-    stop("Values of x0 and x1 have to fit n0 and n1.")
+    stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
   
   # Compute p-values of Fisher's exact test from hypergeometric distribution
   # for every s
   df %>%
-    mutate(s = x0+x1) %>%
+    mutate(s = x_C+x_E) %>%
     group_by(s) %>%
     do(
       .,
       mutate(
         .,
-        cond.p = phyper(x0, n0, n1, s[1])
+        cond_p = phyper(x_C, n_C, n_E, s[1])
       )
     ) %>%
     return()
 }
 
-Raise.level <- function(alpha, n0, n1, acc = 4){
+critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # Compute raised nominal level for Fisher-Boschloo test for true level alpha 
-  # and sample sizes n0 and n1.
-  # Accuracy of obtaining maximum size (dependent on p) can be defined by acc.
+  # and sample sizes n_C and n_E.
+  # Accuracy of obtaining maximum size (dependent on p) can be defined by size_acc.
   # Output: Nominal level (critical value) and exact size.
   
   # Total sample size
-  n <- n0+n1
+  n <- n_C+n_E
   
   # Possible values for the total number of responders s
   s.area <- 0:n
@@ -66,13 +66,13 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
   # Create list of p.values (test statistic) for every s
   p.value.list <- list()
   for (s in s.area) {
-    p.value.list[[s+1]] <- phyper(max(s-n1, 0):min(s, n0), n0, n1, s)
+    p.value.list[[s+1]] <- phyper(max(s-n_E, 0):min(s, n_C), n_C, n_E, s)
   }
   
   # Ordered data frame of p-values mapped to every s
   data.frame(
     p.value = unlist(p.value.list),
-    s = rep(s.area, c(1:min(n0, n1), rep(min(n0, n1)+1, max(n0, n1)-min(n0, n1)+1), n+1-(max(n0, n1)+1):n))
+    s = rep(s.area, c(1:min(n_C, n_E), rep(min(n_C, n_E)+1, max(n_C, n_E)-min(n_C, n_E)+1), n+1-(max(n_C, n_E)+1):n))
   ) %>%
     arrange(p.value, s) ->
     ordered.p.values
@@ -121,7 +121,7 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
   # Exit function if size of smallest possible rejection region is too high
   if (i <= 1) {
     warning("The rejection region of the test is empty.")
-    return(c(nom.alpha.mid = 0, size = 0))
+    return(c(nom_alpha_mid = 0, size = 0))
   }
   
   # If two or more possible results have the same p-values, they have to fall
@@ -134,7 +134,7 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
   # Exit function if size of smallest possible rejection region is too high
   if (i <= 1) {
     warning("The rejection region of the test is empty.")
-    return(c(nom.alpha.mid = 0, size = 0))
+    return(c(nom_alpha_mid = 0, size = 0))
   }
   
   bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
@@ -154,7 +154,7 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
     # Exit function if size of smallest possible rejection region is too high
     if (i <= 1) {
       warning("The rejection region of the test is empty.")
-      return(c(nom.alpha.mid = 0, size = 0))
+      return(c(nom_alpha_mid = 0, size = 0))
     }
     bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
     i <- i-1
@@ -171,7 +171,7 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
   }
   # Creaste grid for p with specified accuracy to compute maximum size with
   # desired accuracy
-  p <- seq(0, 1, by = 10^-acc)
+  p <- seq(0, 1, by = 10^-size_acc)
   # Compute maximum size
   sapply(
     p,
@@ -184,7 +184,7 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
     # Exit function if size of smallest possible rejection region is too high
     if (i <= 1) {
       warning("The rejection region of the test is empty.")
-      return(c(nom.alpha.mid = 0, size = 0))
+      return(c(nom_alpha_mid = 0, size = 0))
     }
     bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
     i <- i-1
@@ -201,278 +201,290 @@ Raise.level <- function(alpha, n0, n1, acc = 4){
   }
   # Define nominal alpha as mean of highest p-value in rejection region and
   # lowest p-value in acceptance region
-  nom.alpha.mid <- (p.values[i] + p.values[i+1])/2
+  nom_alpha_mid <- (p.values[i] + p.values[i+1])/2
   
-  return(c(nom.alpha.mid = nom.alpha.mid, size = max.size))
+  return(c(nom_alpha_mid = nom_alpha_mid, size = max.size))
 }
 
-Compute.custom.reject.prob <- function(df, n0, n1, p0, p1){
-  # Take data frame df with variable x0 and x1 representing all possible
-  # response pairs for group sizes n0 and n1, variable reject indicating
+power_boschloo <- function(df, n_C, n_E, p_CA, p_EA){
+  # Take data frame df with variable x_C and x_E representing all possible
+  # response pairs for group sizes n_C and n_E, variable reject indicating
   # whether coordinates belong to rejection region.
-  # Compute exact prob. of rejection region for all pairs (p0, p1).
+  # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
   
   if (
-    n0+1 != df %>% pull(x0) %>% unique() %>% length() |
-    n1+1 != df %>% pull(x1) %>% unique() %>% length()
+    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
   ) {
-    stop("Values of x0 and x1 have to fit n0 and n1.")
+    stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
   
   if (
-    length(p0) != length(p1) |
-    !all(p0 >= 0 & p0 <= 1 & p1 >= 0 & p1 <= 1)
+    length(p_CA) != length(p_EA) |
+    !all(p_CA >= 0 & p_CA <= 1 & p_EA >= 0 & p_EA <= 1)
   ) {
-    stop("p0 and p1 must have same length and values in [0, 1].")
+    stop("p_CA and p_EA must have same length and values in [0, 1].")
   }
   
   
   # compute uncond. size for every p
   sapply(
-    1:length(p0),
+    1:length(p_CA),
     function(i) {
       df %>%
         filter(reject) %>%
-        mutate(prob = dbinom(x0, n0, p0[i])*dbinom(x1, n1, p1[i])) %>%
+        mutate(prob = dbinom(x_C, n_C, p_CA[i])*dbinom(x_E, n_E, p_EA[i])) %>%
         pull(prob) %>%
         sum()
     }
   ) ->
     result
-  names(result) <- paste(p0, p1, sep = ", ")
+  names(result) <- paste(p_CA, p_EA, sep = ", ")
   return(result)
 }
 
-Calculate.approximate.sample.size <- function(alpha, power, r = 1, p0, p1){
+samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
   # Calculate approximate sample size for normal approximation test for specified
-  # level alpha, power, allocation ratio r = n.1/n.0 and true rates p0, p1.
-  # Output: Sample sizes per group (n.0, n.1).
-  p.0 <- (p0 + r*p1)/(1+r)
-  Delta.A <- p1 - p0
-  n.0 <- ceiling(1/r*(qnorm(1-alpha)*sqrt((1+r)*p.0*(1-p.0)) + qnorm(power)*sqrt(r*p0*(1-p0) + p1*(1-p1)))^2  / Delta.A^2)
-  n.1 <- r*n.0 %>% ceiling()
+  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+  # Output: Sample sizes per group (n_C, n_E).
+  p_0 <- (p_CA + r*p_EA)/(1+r)
+  Delta_A <- p_EA - p_CA
+  n_C <- ceiling(1/r*(qnorm(1-alpha)*sqrt((1+r)*p_0*(1-p_0)) + qnorm(1-beta)*sqrt(r*p_CA*(1-p_CA) + p_EA*(1-p_EA)))^2  / Delta_A^2)
+  n_E <- r*n_C %>% ceiling()
   
   return(
-    list(n.0, n.1)
+    list(n_C = n_C, n_E = n_E)
   )
 }
 
-Calculate.exact.sample.size <- function(alpha, power, r = 1, p0, p1, size.acc = 4){
+samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4){
   # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n1/n0 and true rates p0, p1.
-  # Accuracy of calculating the critical value can be specified by size.acc.
-  # Output: Sample sizes per group (n0, n1), nominal alpha and exact power.
-  if (p0 >= p1) {
-    stop("p1 has to be greater than p0.")
+  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+  # Accuracy of calculating the critical value can be specified by size_acc.
+  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+  if (p_CA >= p_EA) {
+    stop("p_EA has to be greater than p_CA.")
   }
   
   # Estimate sample size with approximate formula
-  n.approx <- Calculate.approximate.sample.size(alpha, power, r, p0, p1)
+  n_appr <- samplesize_normal_appr(
+    p_EA = p_EA,
+    p_CA = p_CA,
+    alpha = alpha,
+    beta = beta,
+    r = r
+  )
   
   # Use estimates as starting values
-  n0 <- n.approx[[1]]
-  n1 <- n.approx[[2]]
+  n_C <- n_appr[["n_C"]]
+  n_E <- n_appr[["n_E"]]
   
   # Initiate data frame for starting sample size
   expand.grid(
-    x0 = 0:n0,
-    x1 = 0:n1
+    x_C = 0:n_C,
+    x_E = 0:n_E
   ) %>%
-    Add.cond.p(n0 = n0, n1 = n1) ->
+    teststat_boschloo(n_C = n_C, n_E = n_E) ->
     df
   
   # Calculate raised nominal level for starting values
-  nom.alpha <- Raise.level(alpha, n0, n1, size.acc)["nom.alpha.mid"]
+  nom_alpha <- critval_boschloo(alpha = alpha, n_C = n_C, n_E = n_E, size_acc = size_acc)["nom_alpha_mid"]
   
   # Calculate exact power for starting values
   df %>%
-    mutate(reject = cond.p <= nom.alpha) %>%
-    Compute.custom.reject.prob(n0, n1, p0, p1) ->
-    exact.power
+    mutate(reject = cond_p <= nom_alpha) %>%
+    power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+    exact_power
   
   # Decrease sample size if power is too high
-  if(exact.power > power){
-    while(exact.power > power){
+  if(exact_power > 1-beta){
+    while(exact_power > 1-beta){
       # Store power and nominal level of last iteration
-      last.power <- exact.power
-      last.alpha <- nom.alpha
+      last_power <- exact_power
+      last_alpha <- nom_alpha
       
       # Decrease sample size by minimal amount possible with allocation ratio r
       if (r >= 1) {
-        n0 <- n0 - 1
-        n1 <- ceiling(r*n0)
+        n_C <- n_C - 1
+        n_E <- ceiling(r*n_C)
       } else {
-        n1 <- n1 - 1
-        n0 <- ceiling(1/r*n1)
+        n_E <- n_E - 1
+        n_C <- ceiling(1/r*n_E)
       }
   
       # Initiate data frame
       expand.grid(
-        x0 = 0:n0,
-        x1 = 0:n1
+        x_C = 0:n_C,
+        x_E = 0:n_E
       ) %>%
-        Add.cond.p(n0 = n0, n1 = n1) ->
+        teststat_boschloo(n_C = n_C, n_E = n_E) ->
         df
       
       # Calculate raised nominal level
-      nom.alpha <- Raise.level(alpha, n0, n1, size.acc)["nom.alpha.mid"]
+      nom_alpha <- critval_boschloo(alpha = alpha, n_C = n_C, n_E = n_E, size_acc = size_acc)["nom_alpha_mid"]
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond.p <= nom.alpha) %>%
-        Compute.custom.reject.prob(n0, n1, p0, p1) ->
-        exact.power
+        mutate(reject = cond_p <= nom_alpha) %>%
+        power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+        exact_power
     }
     # Go one step back
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
-    exact.power <- last.power
-    nom.alpha <- last.alpha
+    exact_power <- last_power
+    nom_alpha <- last_alpha
   }
   
   # If power is too low: increase sample size until power is achieved
-  while (exact.power < power) {
+  while (exact_power < 1-beta) {
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
     
     # Initiate data frame
     expand.grid(
-      x0 = 0:n0,
-      x1 = 0:n1
+      x_C = 0:n_C,
+      x_E = 0:n_E
     ) %>%
-      Add.cond.p(n0 = n0, n1 = n1) ->
+      teststat_boschloo(n_C = n_C, n_E = n_E) ->
       df
     
     # Calculate raised nominal level
-    nom.alpha <- Raise.level(alpha, n0, n1, size.acc)["nom.alpha.mid"]
+    nom_alpha <- critval_boschloo(alpha = alpha, n_C = n_C, n_E = n_E, size_acc = size_acc)["nom_alpha_mid"]
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond.p <= nom.alpha) %>%
-      Compute.custom.reject.prob(n0, n1, p0, p1) ->
-      exact.power
+      mutate(reject = cond_p <= nom_alpha) %>%
+      power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+      exact_power
   }
   
   return(
     list(
-      n0 = n0,
-      n1 = n1,
-      nom.alpha = nom.alpha,
-      exact.power = exact.power
+      n_C = n_C,
+      n_E = n_E,
+      nom_alpha = nom_alpha,
+      exact_power = exact_power
     )
   )
 }
 
-Calculate.exact.Fisher.sample.size <- function(alpha, power, r = 1, p0, p1){
+samplesize_exact_Fisher <- function(p_EA, p_CA, alpha, beta, r){
   # Calculate exact sample size for Fisher's exact test and specified
-  # level alpha, power, allocation ratio r = n1/n0 and true rates p0, p1.
-  # Accuracy of calculating the critical value can be specified by size.acc.
-  # Output: Sample sizes per group (n0, n1) and exact power.
-  if (p0 >= p1) {
-    stop("p1 has to be greater than p0.")
+  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+  # Accuracy of calculating the critical value can be specified by size_acc.
+  # Output: Sample sizes per group (n_C, n_E) and exact power.
+  if (p_CA >= p_EA) {
+    stop("p_EA has to be greater than p_CA.")
   }
   
   # Estimate sample size with approximate formula
-  n.approx <- Calculate.approximate.sample.size(alpha, power, r, p0, p1)
+  n_appr <- samplesize_normal_appr(
+    p_EA = p_EA,
+    p_CA = p_CA,
+    alpha = alpha,
+    beta = beta,
+    r = r
+  )
   
   # Use estimates as starting values
-  n0 <- n.approx[[1]]
-  n1 <- n.approx[[2]]
+  n_C <- n_appr[["n_C"]]
+  n_E <- n_appr[["n_E"]]
   
   # Initiate data frame
   expand.grid(
-    x0 = 0:n0,
-    x1 = 0:n1
+    x_C = 0:n_C,
+    x_E = 0:n_E
   ) %>%
-    Add.cond.p(n0 = n0, n1 = n1) ->
+    teststat_boschloo(n_C = n_C, n_E = n_E) ->
     df
   
   # Calculate exact power
   df %>%
-    mutate(reject = cond.p <= alpha) %>%
-    Compute.custom.reject.prob(n0, n1, p0, p1) ->
-    exact.power
+    mutate(reject = cond_p <= alpha) %>%
+    power_boschloo(n_C, n_E, p_CA, p_EA) ->
+    exact_power
   
   # Decrease sample size if power is too high
-  if(exact.power > power){
-    while(exact.power > power){
+  if(exact_power > 1-beta){
+    while(exact_power > 1-beta){
       # Store power and nominal level of last iteration
-      last.power <- exact.power
+      last_power <- exact_power
 
       # Decrease sample size by minimal amount possible with allocation ratio r
       if (r >= 1) {
-        n0 <- n0 - 1
-        n1 <- ceiling(r*n0)
+        n_C <- n_C - 1
+        n_E <- ceiling(r*n_C)
       } else {
-        n1 <- n1 - 1
-        n0 <- ceiling(1/r*n1)
+        n_E <- n_E - 1
+        n_C <- ceiling(1/r*n_E)
       }
       
       # Initiate data frame
       expand.grid(
-        x0 = 0:n0,
-        x1 = 0:n1
+        x_C = 0:n_C,
+        x_E = 0:n_E
       ) %>%
-        Add.cond.p(n0 = n0, n1 = n1) ->
+        teststat_boschloo(n_C = n_C, n_E = n_E) ->
         df
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond.p <= alpha) %>%
-        Compute.custom.reject.prob(n0, n1, p0, p1) ->
-        exact.power
+        mutate(reject = cond_p <= alpha) %>%
+        power_boschloo(n_C, n_E, p_CA, p_EA) ->
+        exact_power
     }
     # Go one step back
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
-    exact.power <- last.power
+    exact_power <- last_power
   }
   
   # If power is too low: increase sample size until power is achieved
-  while (exact.power < power) {
+  while (exact_power < 1-beta) {
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
     
     # Initiate data frame
     expand.grid(
-      x0 = 0:n0,
-      x1 = 0:n1
+      x_C = 0:n_C,
+      x_E = 0:n_E
     ) %>%
-      Add.cond.p(n0 = n0, n1 = n1) ->
+      teststat_boschloo(n_C = n_C, n_E = n_E) ->
       df
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond.p <= alpha) %>%
-      Compute.custom.reject.prob(n0, n1, p0, p1) ->
-      exact.power
+      mutate(reject = cond_p <= alpha) %>%
+      power_boschloo(n_C, n_E, p_CA, p_EA) ->
+      exact_power
   }
   
   return(
     list(
-      n0 = n0,
-      n1 = n1,
-      exact.power = exact.power
+      n_C = n_C,
+      n_E = n_E,
+      exact_power = exact_power
     )
   )
 }
@@ -480,43 +492,44 @@ Calculate.exact.Fisher.sample.size <- function(alpha, power, r = 1, p0, p1){
 
 # Non-Inferiority ##############################################################
 # Test problem:
-# H0: OR(p1, p0) <= delta
-# H1: OR(p1, p0) > delta
-# with 0 < delta < 1
-Add.cond.p.NI <- function(df, n0, n1, delta){
-  # Take data frame df with variable x0 and x1 representing all possible
-  # response pairs for group sizes n0 and n1 and add conditional fisher p-values
-  # for H0: OR(p1, p0) <= delta.
+# H_0: OR(p_E, p_A) <= gamma
+# H_1: OR(p_E, p_A) > gamma
+# with 0 < gamma < 1
+
+teststat_boschloo_NI <- function(df, n_C, n_E, gamma){
+  # Take data frame df with variable x_C and x_E representing all possible
+  # response pairs for group sizes n_C and n_E and add conditional fisher p-values
+  # for H_0: OR(p_E, p_A) <= gamma.
   if (
-    n0+1 != df %>% pull(x0) %>% unique() %>% length() |
-    n1+1 != df %>% pull(x1) %>% unique() %>% length()
+    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
   ) {
-    stop("Values of x0 and x1 have to fit n0 and n1.")
+    stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
   
   # Compute p-values of Fisher's exact test from Fisher's noncentral 
   # hypergeometric distribution for every s
   df %>%
-    mutate(s = x0+x1) %>%
+    mutate(s = x_C+x_E) %>%
     group_by(s) %>%
     do(
       .,
       mutate(
         .,
-        cond.p = BiasedUrn::pFNCHypergeo(x0, n0, n1, s[1], 1/delta)
+        cond_p = BiasedUrn::pFNCHypergeo(x_C, n_C, n_E, s[1], 1/gamma)
       )
     ) %>%
     return()
 }
 
-Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
+critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   # Compute raised nominal level for Fisher-Boschloo test for true level alpha 
-  # and sample sizes n0 and n1.
-  # Accuracy of obtaining maximum size (dependent on p) can be defined by acc.
+  # and sample sizes n_C and n_E.
+  # Accuracy of obtaining maximum size (dependent on p) can be defined by size_acc.
   # Output: Nominal level (critical value) and exact size.
   
   # Total sample size
-  n <- n0+n1
+  n <- n_C+n_E
   
   # Possible values for the total number of responders s
   s.area <- 0:n
@@ -525,13 +538,13 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   # Create list of p.values (test statistic) for every s
   p.value.list <- list()
   for (s in s.area) {
-    p.value.list[[s+1]] <- BiasedUrn::pFNCHypergeo(max(s-n1, 0):min(s, n0), n0, n1, s, 1/delta)
+    p.value.list[[s+1]] <- BiasedUrn::pFNCHypergeo(max(s-n_E, 0):min(s, n_C), n_C, n_E, s, 1/gamma)
   }
   
   # Ordered data frame of p-values mapped to every s
   data.frame(
     p.value = unlist(p.value.list),
-    s = rep(s.area, c(1:min(n0, n1), rep(min(n0, n1)+1, max(n0, n1)-min(n0, n1)+1), n+1-(max(n0, n1)+1):n))
+    s = rep(s.area, c(1:min(n_C, n_E), rep(min(n_C, n_E)+1, max(n_C, n_E)-min(n_C, n_E)+1), n+1-(max(n_C, n_E)+1):n))
   ) %>%
     arrange(p.value, s) ->
     ordered.p.values
@@ -563,38 +576,38 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
     sum(log(seq_len(o-max(o-u, u))+max(o-u, u))) - sum(log(seq_len(min(o-u, u))))
   }
   
-  # Help function to compute P(S=s) under constant odds ratio delta
-  Compute.s.prob.vec <- function(p0){
-    p1 <- 1/(1+(1-p0)/(delta*p0))
-    k.range <- 0:n0
+  # Help function to compute P(S=s) under constant odds ratio gamma
+  Compute.s.prob.vec <- function(p_CA){
+    p_EA <- 1/(1+(1-p_CA)/(gamma*p_CA))
+    k.range <- 0:n_C
     sapply(
       k.range,
-      function(y) logchoose(n0, y) - y*log(delta)
+      function(y) logchoose(n_C, y) - y*log(gamma)
     ) ->
       add.1
-    s.minus.k.range <- 0:n1
+    s.minus.k.range <- 0:n_E
     sapply(
       s.minus.k.range,
-      function(y) logchoose(n1, y)
+      function(y) logchoose(n_E, y)
     ) ->
       add.2
     sapply(
       s.area,
       function(x){
-        k <- max(x-n1, 0):min(x, n0)
+        k <- max(x-n_E, 0):min(x, n_C)
         help.val <- add.1[k+1] + add.2[x-k+1]
-        help.val <- help.val + n0*log(1-p0) + (n1-x)*log(1-p1) + x*log(p1)
+        help.val <- help.val + n_C*log(1-p_CA) + (n_E-x)*log(1-p_EA) + x*log(p_EA)
         sum(exp(help.val))
       }
     )
   }
   
-  # Create grid with 9 points fo p0 (must not contain 0 or 1)
-  p0 <- seq(0.1, 0.9, by = 10^-1)
+  # Create grid with 9 points fo p_CA (must not contain 0 or 1)
+  p_CA <- seq(0.1, 0.9, by = 10^-1)
   
-  # Create list of probabilites P(S=s) for every p0 in grid
+  # Create list of probabilites P(S=s) for every p_CA in grid
   lapply(
-    p0,
+    p_CA,
     Compute.s.prob.vec
   ) ->
     s.prob.vec.list
@@ -611,7 +624,7 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
     bounds[new.s+1] <- new.c
     # Compute size for every p in grid and take maximum
     sapply(
-      1:length(p0),
+      1:length(p_CA),
       function(x) sum(bounds[bounds != -Inf]*s.prob.vec.list[[x]][bounds != -Inf])
     ) %>%
       max() ->
@@ -630,18 +643,18 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   }
   
   # Compute maximal size with increasing accuracy
-  for (grid.acc in 2:acc) {
+  for (grid.acc in 2:size_acc) {
     # Define grid
-    p0 <- seq(10^-grid.acc, 1-10^-grid.acc, by = 10^-grid.acc)
+    p_CA <- seq(10^-grid.acc, 1-10^-grid.acc, by = 10^-grid.acc)
     # Compute probabilities P(S=s)
     lapply(
-      p0,
+      p_CA,
       Compute.s.prob.vec
     ) ->
       s.prob.vec.list
     # Compute maximum size
     sapply(
-      1:length(p0),
+      1:length(p_CA),
       function(x) sum(bounds[bounds != -Inf]*s.prob.vec.list[[x]][bounds != -Inf])
     ) %>%
       max() ->
@@ -657,7 +670,7 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
       }
       # Compute maximum size
       sapply(
-        1:length(p0),
+        1:length(p_CA),
         function(x) sum(bounds[bounds != -Inf]*s.prob.vec.list[[x]][bounds != -Inf])
       ) %>%
         max() ->
@@ -674,243 +687,257 @@ Raise.level.NI <- function(alpha, n0, n1, delta, acc = 3){
   
   # Define nominal alpha as mean of highest p-value in rejection region and
   # lowest p-value in acceptance region
-  nom.alpha.mid <- (p.values[i] + p.values[i+1])/2
+  nom_alpha_mid <- (p.values[i] + p.values[i+1])/2
   
-  return(c(nom.alpha.mid = nom.alpha.mid, size = max.size))
+  return(c(nom_alpha_mid = nom_alpha_mid, size = max.size))
 }
 
-Calculate.approximate.sample.size.NI <- function(alpha, power, r = 1, p0, p1, delta){
+samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
   # Calculate approximate sample size for approximate test for specified
-  # level alpha, power, allocation ratio r = n.1/n.0, true rates p0, p1 and
-  # OR-NI.margin delta.
-  # Output: Sample sizes per group (n.0, n.1).
-  theta.A <- p1*(1-p0)/(p0*(1-p1))
-  n.0 <- ceiling(1/r*(qnorm(1-alpha) + qnorm(power))^2 * (1/(p1*(1-p1)) + r/(p0*(1-p0))) / (log(theta.A) - log(delta))^2)
-  n.1 <- r*n.0 %>% ceiling()
+  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+  # OR-NI.margin gamma.
+  # Output: Sample sizes per group (n_C, n_E).
+  theta_A <- p_EA*(1-p_CA)/(p_CA*(1-p_EA))
+  n_C <- ceiling(1/r*(qnorm(1-alpha) + qnorm(1-beta))^2 * (1/(p_EA*(1-p_EA)) + r/(p_CA*(1-p_CA))) / (log(theta_A) - log(gamma))^2)
+  n_E <- r*n_C %>% ceiling()
   
   return(
-    list(n.0, n.1)
+    list(n_C = n_C, n_E = n_E)
   )
 }
 
-Calculate.exact.sample.size.NI <- function(alpha, delta, power, r = 1, p0, p1, size.acc = 3){
+samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3){
   # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n1/n0, true rates p0, p1 and
-  # OR-NI-margin delta.
-  # Accuracy of calculating the critical value can be specified by size.acc.
-  # Output: Sample sizes per group (n0, n1), nominal alpha and exact power.
+  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+  # OR-NI-margin gamma.
+  # Accuracy of calculating the critical value can be specified by size_acc.
+  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
   
-  if (p1*(1-p0)/(p0*(1-p1)) <= delta) {
-    stop("OR(p1, p0) has to be greater than delta.")
+  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma) {
+    stop("OR(p_EA, p_CA) has to be greater than gamma.")
   }
   
   # Estimate sample size with approximate formula
-  n.approx <- Calculate.approximate.sample.size.NI(alpha, power, r, p0, p1, delta)
+  n_appr <- samplesize_Wang(
+    p_EA = p_EA,
+    p_CA = p_CA,
+    gamma = gamm,
+    alpha = alpha,
+    beta = beta,
+    r = r
+  )
   
   # Use estimates as starting values
-  n0 <- n.approx[[1]]
-  n1 <- n.approx[[2]]
+  n_C <- n_appr[["n_C"]]
+  n_E <- n_appr[["n_E"]]
   
   # Initiate data frame
   expand.grid(
-    x0 = 0:n0,
-    x1 = 0:n1
+    x_C = 0:n_C,
+    x_E = 0:n_E
   ) %>%
-    Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+    teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
     df
   
   # Calculate raised nominal level
-  nom.alpha <- Raise.level.NI(alpha, n0, n1, delta, size.acc)["nom.alpha.mid"]
+  nom_alpha <- critval_boschloo_NI(alpha = alpha, n_C = n_C, n_E = n_E, gamma = gamma, size_acc = size_acc)["nom_alpha_mid"]
   
   # Calculate exact power
   df %>%
-    mutate(reject = cond.p <= nom.alpha) %>%
-    Compute.custom.reject.prob(n0, n1, p0, p1) ->
-    exact.power
+    mutate(reject = cond_p <= nom_alpha) %>%
+    power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+    exact_power
   
   # Decrease sample size if power is too high
-  if(exact.power > power){
-    while(exact.power > power){
+  if(exact_power > 1-beta){
+    while(exact_power > 1-beta){
       # Store power and nominal level of last iteration
-      last.power <- exact.power
-      last.alpha <- nom.alpha
+      last_power <- exact_power
+      last_alpha <- nom_alpha
       
       # Decrease sample size by minimal amount possible with allocation ratio r
       if (r >= 1) {
-        n0 <- n0 - 1
-        n1 <- ceiling(r*n0)
+        n_C <- n_C - 1
+        n_E <- ceiling(r*n_C)
       } else {
-        n1 <- n1 - 1
-        n0 <- ceiling(1/r*n1)
+        n_E <- n_E - 1
+        n_C <- ceiling(1/r*n_E)
       }
       
       # Initiate data frame
       expand.grid(
-        x0 = 0:n0,
-        x1 = 0:n1
+        x_C = 0:n_C,
+        x_E = 0:n_E
       ) %>%
-        Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+        teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
         df
       
       # Calculate raised nominal level
-      nom.alpha <- Raise.level.NI(alpha, n0, n1, delta, size.acc)["nom.alpha.mid"]
+      nom_alpha <- critval_boschloo_NI(alpha = alpha, n_C = n_C, n_E = n_E, gamma = gamma, size_acc = size_acc)["nom_alpha_mid"]
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond.p <= nom.alpha) %>%
-        Compute.custom.reject.prob(n0, n1, p0, p1) ->
-        exact.power
+        mutate(reject = cond_p <= nom_alpha) %>%
+        power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+        exact_power
     }
     # Go one step back
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
-    exact.power <- last.power
-    nom.alpha <- last.alpha
+    exact_power <- last_power
+    nom_alpha <- last_alpha
   }
   
   # If power is too low: increase sample size until power is achieved
-  while (exact.power < power) {
+  while (exact_power < 1-beta) {
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
     
     # Initiate data frame
     expand.grid(
-      x0 = 0:n0,
-      x1 = 0:n1
+      x_C = 0:n_C,
+      x_E = 0:n_E
     ) %>%
-      Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+      teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
       df
     
     # Calculate raised nominal level
-    nom.alpha <- Raise.level.NI(alpha, n0, n1, delta, size.acc)["nom.alpha.mid"]
+    nom_alpha <- critval_boschloo_NI(alpha = alpha, n_C = n_C, n_E = n_E, gamma = gamma, size_acc = size_acc)["nom_alpha_mid"]
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond.p <= nom.alpha) %>%
-      Compute.custom.reject.prob(n0, n1, p0, p1) ->
-      exact.power
+      mutate(reject = cond_p <= nom_alpha) %>%
+      power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+      exact_power
   }
   
   return(
     list(
-      n0 = n0,
-      n1 = n1,
-      nom.alpha = nom.alpha,
-      exact.power = exact.power
+      n_C = n_C,
+      n_E = n_E,
+      nom_alpha = nom_alpha,
+      exact_power = exact_power
     )
   )
 }
 
-Calculate.exact.Fisher.sample.size.NI <- function(alpha, delta, power, r = 1, p0, p1, size.acc = 3){
+samplesize_exact_Fisher_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3){
   # Calculate exact sample size for Fisher's exact test and specified
-  # level alpha, power, allocation ratio r = n1/n0 and true rates p0, p1.
-  # Accuracy of calculating the critical value can be specified by size.acc.
-  # Output: Sample sizes per group (n0, n1) and exact power.
-  if (p1*(1-p0)/(p0*(1-p1)) <= delta) {
-    stop("OR(p1, p0) has to be greater than delta.")
+  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+  # Accuracy of calculating the critical value can be specified by size_acc.
+  # Output: Sample sizes per group (n_C, n_E) and exact power.
+  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma) {
+    stop("OR(p_EA, p_CA) has to be greater than gamma.")
   }
   
   # Estimate sample size with approximate formula
-  n.approx <- Calculate.approximate.sample.size.NI(alpha, power, r, p0, p1, delta)
+  n_appr <- samplesize_Wang(
+    p_EA = p_EA,
+    p_CA = p_CA,
+    gamma = gamm,
+    alpha = alpha,
+    beta = beta,
+    r = r
+  )
   
   # Use estimates as starting values
-  n0 <- n.approx[[1]]
-  n1 <- n.approx[[2]]
+  n_C <- n_appr[["n_C"]]
+  n_E <- n_appr[["n_E"]]
   
   # Initiate data frame
   expand.grid(
-    x0 = 0:n0,
-    x1 = 0:n1
+    x_C = 0:n_C,
+    x_E = 0:n_E
   ) %>%
-    Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+    teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
     df
   
   # Calculate exact power
   df %>%
-    mutate(reject = cond.p <= alpha) %>%
-    Compute.custom.reject.prob(n0, n1, p0, p1) ->
-    exact.power
+    mutate(reject = cond_p <= alpha) %>%
+    power_boschloo(n_C, n_E, p_CA, p_EA) ->
+    exact_power
   
   # Decrease sample size if power is too high
-  if(exact.power > power){
-    while(exact.power > power){
+  if(exact_power > 1-beta){
+    while(exact_power > 1-beta){
       # Store power and nominal level of last iteration
-      last.power <- exact.power
+      last_power <- exact_power
       
       # Decrease sample size by minimal amount possible with allocation ratio r
       if (r >= 1) {
-        n0 <- n0 - 1
-        n1 <- ceiling(r*n0)
+        n_C <- n_C - 1
+        n_E <- ceiling(r*n_C)
       } else {
-        n1 <- n1 - 1
-        n0 <- ceiling(1/r*n1)
+        n_E <- n_E - 1
+        n_C <- ceiling(1/r*n_E)
       }
       
       # Initiate data frame
       expand.grid(
-        x0 = 0:n0,
-        x1 = 0:n1
+        x_C = 0:n_C,
+        x_E = 0:n_E
       ) %>%
-        Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+        teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
         df
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond.p <= alpha) %>%
-        Compute.custom.reject.prob(n0, n1, p0, p1) ->
-        exact.power
+        mutate(reject = cond_p <= alpha) %>%
+        power_boschloo(n_C, n_E, p_CA, p_EA) ->
+        exact_power
     }
     # Go one step back
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
-    exact.power <- last.power
+    exact_power <- last_power
   }
   
   # If power is too low: increase sample size until power is achieved
-  while (exact.power < power) {
+  while (exact_power < 1-beta) {
     if (r >= 1) {
-      n0 <- n0 + 1
-      n1 <- ceiling(r*n0)
+      n_C <- n_C + 1
+      n_E <- ceiling(r*n_C)
     } else {
-      n1 <- n1 + 1
-      n0 <- ceiling(1/r*n1)
+      n_E <- n_E + 1
+      n_C <- ceiling(1/r*n_E)
     }
     
     # Initiate data frame
     expand.grid(
-      x0 = 0:n0,
-      x1 = 0:n1
+      x_C = 0:n_C,
+      x_E = 0:n_E
     ) %>%
-      Add.cond.p.NI(n0 = n0, n1 = n1, delta = delta) ->
+      teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
       df
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond.p <= alpha) %>%
-      Compute.custom.reject.prob(n0, n1, p0, p1) ->
-      exact.power
+      mutate(reject = cond_p <= alpha) %>%
+      power_boschloo(n_C, n_E, p_CA, p_EA) ->
+      exact_power
   }
   
   return(
     list(
-      n0 = n0,
-      n1 = n1,
-      exact.power = exact.power
+      n_C = n_C,
+      n_E = n_E,
+      exact_power = exact_power
     )
   )
 }
