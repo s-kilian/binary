@@ -4,16 +4,25 @@
 ##                        comparison of two groups with binary endpoint.
 ##                 Input: none
 ##                Output: Functions:
-##                        teststat: Compute test statistic every result
-##                        critval: Find critical value for Fisher-Boschloo test
+##                        teststat_boschloo: Compute test statistic
+##                        critval_boschloo: Find critical value
 ##                        power_boschloo: Compute exact probability
 ##                          of rejecting H_0 for an arbitrary rejection region
-##                        Calculate.approximate.sample.size: for chi-square test
-##                        Calculate.exact.sample.size: iteratively for Fisher-Boschloo test
-##                        Calculate.exact.Fisher.sample.size: iteratively for
+##                        samplesize_normal_appr: Compute sample size for
+##                          normal approximation test
+##                        samplesize_exact_boschloo: COmpute exact sample size
+##                        samplesize_exact_Fisher: Compute sample size for
+##                          Fisher's exact test
+##                        Same functions for non-inferiority:
+##                        teststat_boschloo_NI: Compute test statistic
+##                        critval_boschloo_NI: Find critical value
+##                        samplesize_Wang: Compute sample size for a
+##                          normal approximation test by Wang
+##                        samplesize_exact_boschloo_NI: COmpute exact sample size
+##                        samplesize_exact_Fisher_NI: Compute sample size for
 ##                          Fisher's exact test
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2019-06-26
+##   Date of last update: 2019-07-03
 ##                Author: Samuel Kilian
 ##..............................................................................
 
