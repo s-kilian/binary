@@ -15,8 +15,8 @@ test_that("Power can be reproduced", {
 # for sample size 15 in both groups and true rates p1 = 0.3 (0.6, 0.7, 0.8),
 # p0 = 0.1(0.1, 0.1, 0.2, 0.2) and alpha = 0.01 (0.05) is:
 data.frame(
-  n1 = rep(15, 8),
-  n0 = rep(15, 8),
+  n_E = rep(15, 8),
+  n_C = rep(15, 8),
   p1 = rep(c(0.3, 0.6, 0.7, 0.8), 2),
   p0 = rep(c(0.1, 0.1, 0.2, 0.2), 2),
   alpha = rep(c(0.01, 0.05), each = 4),
@@ -32,25 +32,25 @@ data.frame(
   )
 ) ->
   df
-# Compute power with function Compute.custom.reject.prob():
+# Compute power with function power_boschloo():
 df %>%
   mutate(
     power2 = as.vector(
       sapply(
-      1:length(n1),
-      function(i) Compute.custom.reject.prob(
-        expand.grid(
-          x0 = 0:n0[i],
-          x1 = 0:n1[i]
+      1:length(n_E),
+      function(i) power_boschloo(
+        df = expand.grid(
+          x_C = 0:n_C[i],
+          x_E = 0:n_E[i]
         ) %>%
-          Add.cond.p(n0[i], n1[i]) %>%
+          teststat_boschloo(n_C = n_C[i], n_E = n_E[i]) %>%
           mutate(
-            reject = cond.p <= Raise.level(alpha[i], n0[i], n1[i], 3)["nom.alpha.mid"]
+            reject = cond_p <= critval_boschloo(alpha = alpha[i], n_C = n_C[i], n_E = n_E[i], size_acc = 3)["nom_alpha_mid"]
           ),
-        n0[i],
-        n1[i],
-        p0[i],
-        p1[i]
+        n_C = n_C[i],
+        n_E = n_E[i],
+        p_CA = p0[i],
+        p_EA = p1[i]
       )
     )
     )
@@ -85,13 +85,13 @@ data.frame(
   )
 ) ->
   df
-# Compute approximate sample size with function Calculate.approximate.sample.size()
+# Compute approximate sample size with function samplesize_normal_appr()
 df %>%
   mutate(
     n.appr.2 = as.vector(
       sapply(
       1:length(p1),
-      function(i) Calculate.approximate.sample.size(alpha[i], power[i], r[i], p0[i], p1[i]) %>%
+      function(i) samplesize_normal_appr(alpha = alpha[i], beta = 1-power[i], r = r[i], p_CA = p0[i], p_EA = p1[i]) %>%
         unlist() %>%
         sum()
     )
@@ -127,14 +127,14 @@ data.frame(
   )
 ) ->
   df
-# Compute exact sample size with function Calculate.approximate.sample.size()
+# Compute exact sample size with function samplesize_exact_boschloo()
 df %>%
   mutate(
     n.ex.2 = as.vector(
       sapply(
       1:length(p1),
-      function(i) Calculate.exact.sample.size(alpha[i], power[i], r[i], p0[i], p1[i], 3) %>%
-        (function(x) x[["n0"]]+x[["n1"]])
+      function(i) samplesize_exact_boschloo(alpha = alpha[i], beta = 1-power[i], r = r[i], p_CA = p0[i], p_EA = p1[i], size_acc = 3) %>%
+        (function(x) x[["n_C"]]+x[["n_E"]])
     ))
   ) -> df
 
@@ -170,14 +170,14 @@ data.frame(
   )
 ) ->
   df
-# Compute exact sample size with function Calculate.approximate.sample.size()
+# Compute exact sample size with function samplesize_exact_boschloo()
 df %>%
   mutate(
     n.ex.2 = as.vector(
       sapply(
       1:length(p1),
-      function(i) Calculate.exact.sample.size(alpha[i], power[i], r[i], p0[i], p1[i], 3) %>%
-        (function(x) x[["n0"]]+x[["n1"]])
+      function(i) samplesize_exact_boschloo(alpha = alpha[i], beta = 1-power[i], r = r[i], p_CA = p0[i], p_EA = p1[i], size_acc = 3) %>%
+        (function(x) x[["n_C"]]+x[["n_E"]])
     ))
   ) -> df
 
@@ -213,8 +213,8 @@ df %>%
     n.2 = as.vector(
       sapply(
       1:length(p1),
-      function(i) Calculate.exact.Fisher.sample.size(alpha[i], power[i], 1, p0[i], p1[i]) %>%
-        (function(x) x[["n0"]]+x[["n1"]])
+      function(i) samplesize_exact_Fisher(alpha = alpha[i], beta = 1-power[i], r = 1, p_CA = p0[i], p_EA = p1[i]) %>%
+        (function(x) x[["n_C"]]+x[["n_E"]])
     ))
   ) -> df
 
@@ -231,11 +231,11 @@ expect_equal(df$n, df$n.2, tolerance = .5, scale = 1)
 test_that("Non-inferiority example", {
 
 # Non-inferiority
-# Raised nomianl level: According to [Wellek, 2010], the raised nominal level
-# for delta = 1/3 (1/2), n0 = n1 = 10 (25, 50), alpha = 0.05 is (Table 6.22, p.178):
+# Raised nominal level: According to [Wellek, 2010], the raised nominal level
+# for delta = 1/3 (1/2), n_C = n_E = 10 (25, 50), alpha = 0.05 is (Table 6.22, p.178):
 data.frame(
-  n0 = rep(c(10, 25, 50), 2),
-  n1 = rep(c(10, 25, 50), 2),
+  n_C = rep(c(10, 25, 50), 2),
+  n_E = rep(c(10, 25, 50), 2),
   alpha = c(0.05, 0.05084, 0.05, 0.05, 0.05065, 0.05),
   delta = rep(c(2/3, 1/2), each = 3),
   nom.alpha = c(
@@ -260,15 +260,15 @@ data.frame(
   df
 # Calculate raised nominal level with function Raise.level.NI():
 for (i in 1:nrow(df)) {
-  suppressWarnings(Raise.level.NI(
-    df$alpha[i],
-    df$n0[i],
-    df$n1[i],
-    df$delta[i],
-    3
+  suppressWarnings(critval_boschloo_NI(
+    alpha = df$alpha[i],
+    n_C = df$n_C[i],
+    n_E = df$n_E[i],
+    gamma = df$delta[i],
+    size_acc = 3
   )) ->
     result
-  df$nom.alpha.2[i] <- result[["nom.alpha.mid"]]
+  df$nom.alpha.2[i] <- result[["nom_alpha_mid"]]
   df$size.2[i] <- result[["size"]]
 }
 
