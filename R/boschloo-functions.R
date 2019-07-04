@@ -951,3 +951,26 @@ samplesize_exact_Fisher_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_a
   )
 }
 
+p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3){
+  # Calculate p-values for a specific result (x_E., x_C.)
+  # Define grid for p_C
+  p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
+  
+  # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
+  # the null hypothesis
+  p_E <- 1/(1+(1-p_C)/(gamma*p_C))
+  
+  expand.grid(
+    x_C = 0:n_C,
+    x_E = 0:n_E
+  ) %>%
+    teststat_boschloo_NI(n_E = n_E, n_C = n_C, gamma = gamma) %>%
+    ungroup() %>%
+    mutate(
+      reject = cond_p <= cond_p[x_E == x_E. & x_C == x_C.]
+    ) %>%
+    power_boschloo(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
+    p.values
+  
+  return(p.values)
+}
