@@ -21,6 +21,8 @@
 ##                        samplesize_exact_boschloo_NI: COmpute exact sample size
 ##                        samplesize_exact_Fisher_NI: Compute sample size for
 ##                          Fisher's exact test
+##                        p_value: Calculate p-value for NI (superiority is
+##                          special case with gamma = 1)
 ##      Date of creation: 2019-04-04
 ##   Date of last update: 2019-07-03
 ##                Author: Samuel Kilian
