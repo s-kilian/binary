@@ -730,7 +730,7 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
   n_appr <- samplesize_Wang(
     p_EA = p_EA,
     p_CA = p_CA,
-    gamma = gamm,
+    gamma = gamma,
     alpha = alpha,
     beta = beta,
     r = r
@@ -853,7 +853,7 @@ samplesize_exact_Fisher_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_a
   n_appr <- samplesize_Wang(
     p_EA = p_EA,
     p_CA = p_CA,
-    gamma = gamm,
+    gamma = gamma,
     alpha = alpha,
     beta = beta,
     r = r
