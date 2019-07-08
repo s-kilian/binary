@@ -24,7 +24,7 @@
 ##                        p_value: Calculate p-value for NI (superiority is
 ##                          special case with gamma = 1)
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2019-07-03
+##   Date of last update: 2019-07-08
 ##                Author: Samuel Kilian
 ##..............................................................................
 
