@@ -86,11 +86,6 @@ teststat <- function(df, n_E, n_C, delta, method){
   return(return)
 }
 
-test_RD(x_E, x_C, n_E, n_C, delta = 0.1)
-teststat(df, n_E, n_C, delta = 0.1, method = "RD")
-test_RR(x_E, x_C = 3, n_E, n_C, delta = 0.9)
-teststat(df[2:5,], n_E, n_C, delta = 0.8, method = "RR")
-
 
 # function to compute p_E from p_C and NI-margin delta s.t. effect(p_E, p_C) = delta
 p_C.to.p_E <- function(p_C, method, delta){
@@ -295,9 +290,9 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     z_alpha <- qnorm(1-alpha, mean = 0, sd = 1)
     z_beta <- qnorm(1-beta, mean = 0, sd = 1)
     # Calculating the sample size
-    n <- (1+r) / r * (z_alpha * sqrt(r * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
-                      + z_beta * sqrt(r * p_CA * (1 - p_CA) + p_EA * (1 - p_EA)))^2 / 
-      (p_EA - p_CA + delta)^2
+    n <- (1+r) / r * (z_alpha * sqrt(r * delta^2 * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
+                      + z_beta * sqrt(r * delta^2 * p_CA * (1 - p_CA) + p_EA * (1 - p_EA)))^2 / 
+      (p_EA - delta * p_CA)^2
     
     n_C <- ceiling(1/(1+r) * n)
     n_E <- ceiling(r/(1+r) * n)
@@ -451,6 +446,9 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
   # the null hypothesis
   p_E <- p_C.to.p_E(p_C, method, delta)
   
+  p_C <- p_C[p_E >= 0 & p_E <= 1]
+  p_E <- p_E[p_E >= 0 & p_E <= 1]
+  
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
   expand.grid(
@@ -459,7 +457,7 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
   ) %>%
     teststat(n_E, n_C, delta, method) %>%
     mutate(
-      reject = stat >= stat[x_E == x_E. & x_C == x_C.]
+      reject = stat <= stat[x_E == x_E. & x_C == x_C.]
     ) %>%
     power(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
     p.values
@@ -486,63 +484,23 @@ alpha = 0.05
 
 cv <- critval(alpha = alpha, n_C = n_C, n_E = n_E, method = method, delta = delta, size_acc = 4)
 
-p_CA = c(0.5, 0.5)
-p_EA = c(0.7, 0.55)
+p_CA = c(0.5)
+p_EA = c(0.7)
 
 reject <- teststat(df, n_E, n_C, delta, method)$stat < cv$crit.val.mid
 df <- data.frame(df, reject = reject)
 
 power(df, n_C, n_E, p_CA, p_EA)
 
-#######################################################################
 
-# Hier weiter: Hier stimmt was mit RR nicht:
 samplesize_appr(p_EA, p_CA, delta = 0.1, alpha, beta=0.2, r=1, method = "RD")
+samplesize_exact(p_EA, p_CA, delta = 0.1, alpha, beta = 0.2, r = 1, size_acc = 3, method = "RD")  
+
+
+samplesize_appr(p_EA, p_CA, delta = 0.8, alpha, beta=0.2, r = 1, method = "RR")
+samplesize_exact(p_EA, p_CA, delta = 0.8, alpha, beta = 0.2, r = 1, size_acc = 3, method = "RR")
   
-  
-  
 
-
-p_EA = 0.28
-p_CA = 0.2
-method = "RD"
-alpha = 0.05
-beta = 0.2
-r = 1
-samplesize_appr(p_EA, p_CA, delta, alpha, beta, r, method)
-samplesize_exact(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method)
-x_E. = 5
-x_C. = 8
-p_value(5, 8, n_E, n_C, method, delta, size_acc = 3)
-
-
-
-
-
-# Testen:
-
-group1 = c(rep(TRUE,0), rep(FALSE,18))
-group2 = c(rep(TRUE,0), rep(FALSE,9))
-delta = -0.1
-alternative = "greater"
-alpha = 0.025
-
-
-t = test_RD(sum(group1), sum(group2), length(group1), length(group2), -delta)
-
-
-
-library(gsDesign)
-
-group1 = c(rep(TRUE,9), rep(FALSE,1))
-group2 = c(rep(TRUE,1), rep(FALSE,9))
-
-testBinomial(sum(group1), sum(group2), length(group1), length(group2), delta0=-0.1, chisq=0, adj=0, scale="Difference", tol=.1e-10)
-
-
-group1 = c(rep(TRUE,0), rep(FALSE,10))
-group2 = c(rep(TRUE,0), rep(FALSE,10))
-
-testBinomial(sum(group1), sum(group2), length(group1), length(group2), delta0=log(0.05), chisq=0, adj=0, scale="RR", tol=.1e-10)
-
+max(p_value(15, 15, 50, 50, method = "RD", delta = 0.1, size_acc = 3))
+max(p_value(20, 15, 50, 50, method = "RR", delta = 0.8, size_acc = 3))
 
