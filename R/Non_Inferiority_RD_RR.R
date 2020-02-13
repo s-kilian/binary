@@ -15,7 +15,7 @@
 library(tidyverse)
 
 # function to calculate test statistic for Risk Difference
-test_RD <- function(x_E, x_C, n_E, n_C, delta){
+test_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
   p_C <- x_C / n_C
   
@@ -34,14 +34,19 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta){
   p_E0 <- 2*u*cos(w) - b/(3*a)
   p_C0 <- p_E0 - (-delta)
   
-  ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C)) %>% # Teststatistik wird hier umgeordnet (im Vergl. zu Chan)
-    return()
+  if (better == "high"){
+   return <-  ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+  }
+  if (better == "low"){
+    return <- -ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+  }
+  return(return)
   
 }
 
 
 # function to calculate test statistic for Relative Risk
-test_RR <- function(x_E, x_C, n_E, n_C, delta){
+test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
   p_C <- x_C / n_C
   
@@ -55,14 +60,19 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta){
   p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
   p_C0 <- p_E0 / delta
   
-  ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C)) %>%
-    return()
+  if (better == "high"){
+    return <- ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+  }
+  if (better == "low"){
+    return <- -ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+  }
+    return(return)
 }
 
 
 
 # function to compute test statistic for every response pair
-teststat <- function(df, n_E, n_C, delta, method){
+teststat <- function(df, n_E, n_C, delta, method, better){
   # df is a data frame with all possible response pairs (x_E, x_C), i.e.
   # df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   # n_E, n_C are the sample sizes in the groups
@@ -72,14 +82,14 @@ teststat <- function(df, n_E, n_C, delta, method){
   if (method == "RR") {
     return = df %>%
       mutate(
-        stat = test_RR(x_E, x_C, n_E, n_C, delta)
+        stat = test_RR(x_E, x_C, n_E, n_C, delta, better)
       ) 
   }
    
   if (method == "RD") {
     return = df %>%
       mutate(
-        stat = test_RD(x_E, x_C, n_E, n_C, delta)
+        stat = test_RD(x_E, x_C, n_E, n_C, delta, better)
       )
   }
   
@@ -102,7 +112,7 @@ p_C.to.p_E <- function(p_C, method, delta){
 
 
 # function to compute the critical value of a specific test statistic
-critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4){
+critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   # method defines the used test with corresponding statistic and, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
   
@@ -111,7 +121,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4){
     x_C = 0:n_C,
     x_E = 0:n_E
   ) %>%
-    teststat(n_E, n_C, delta, method) %>%
+    teststat(n_E, n_C, delta, method, better) %>%
     arrange(stat) ->
     df.stat
   
@@ -204,7 +214,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4){
 }
 
 
-power <- function(df, n_C, n_E, p_CA, p_EA){
+power <- function(df, n_C, n_E, p_CA, p_EA, better){
   # Take data frame df with variable x_C and x_E representing all possible
   # response pairs for group sizes n_C and n_E and variable reject indicating
   # whether coordinates belong to rejection region.
@@ -242,73 +252,11 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
 }
 
 
-# Function to compute approximate sample size
-samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
-  
-  if(method == "RD"){
-    theta <- 1/r
-    
-    a <- 1+theta
-    b <- -(1 + theta + p_EA + theta * p_CA + (-delta) * (theta + 2))
-    c <- (-delta)^2 + (-delta) * (2*p_EA + theta + 1) + p_EA + theta * p_CA
-    d <- - p_EA * (-delta) * (1 + (-delta))
-    
-    # Define the parameters for solving the equation
-    v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
-    u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
-    w <- 1/3 * (pi + acos(v/u^3))
-    
-    # Define the solution
-    p_E0 <- 2*u*cos(w) - b/(3*a)
-    p_C0 <- p_E0 - (-delta)
-  
-    z_alpha <- qnorm(1-alpha, mean = 0, sd = 1)
-    z_beta <- qnorm(1-beta, mean = 0, sd = 1)
-    
-    # Calculating the sample size
-    n <- (1+r) / r * (z_alpha * sqrt(r * p_E0 * (1 - p_E0) + p_C0 * (1-p_C0))
-               + z_beta * sqrt(r * p_EA * (1 - p_EA) + p_CA * (1-p_CA)))^2 / 
-          (p_EA - p_CA + delta)^2
-    
-    n_C <- ceiling(1/(1+r) * n)
-    n_E <- ceiling(r/(1+r) * n)
-    n_total <- n_E + n_C
-  }
-  
-  
-  if(method == "RR"){
-  
-    theta <- 1/r
-    
-    a <- 1 + theta
-    b <- -(delta*(1 + theta*p_CA) + theta + p_EA)
-    c <- delta * (p_EA + theta * p_CA)
-    # Define the solution
-    p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
-    p_C0 <- p_E0 / delta
-    
-    z_alpha <- qnorm(1-alpha, mean = 0, sd = 1)
-    z_beta <- qnorm(1-beta, mean = 0, sd = 1)
-    # Calculating the sample size
-    n <- (1+r) / r * (z_alpha * sqrt(r * delta^2 * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
-                      + z_beta * sqrt(r * delta^2 * p_CA * (1 - p_CA) + p_EA * (1 - p_EA)))^2 / 
-      (p_EA - delta * p_CA)^2
-    
-    n_C <- ceiling(1/(1+r) * n)
-    n_E <- ceiling(r/(1+r) * n)
-    n_total<- n_E + n_C
-    
-  }
-
-  
-  return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C))
-}
-
 
 
 
 # Function to compute exact sample size
-samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method){
+samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
   # Calculate exact sample size for method "X and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
   # OR-NI-margin delta
@@ -316,11 +264,11 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
   # Output: Sample sizes per group (n_C, n_E), critical value and exact power.
   
   # Check wheter p_EA, p_CA lie in the alternative hypothesis
-  if (
-    p_C.to.p_E(p_CA, method, delta) >= p_EA
-  ) {
-    stop("p_EA, p_CA has to belong to alternative hypothesis.")
-  }
+  #if (
+  #  p_C.to.p_E(p_CA, method, delta) >= p_EA
+  #) {
+  #  stop("p_EA, p_CA has to belong to alternative hypothesis.")
+  #}
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(
@@ -342,11 +290,11 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     x_C = 0:n_C,
     x_E = 0:n_E
   ) %>%
-    teststat(n_C = n_C, n_E = n_E, delta = delta, method = method) ->
+    teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better) ->
     df
   
   # Calculate critical value
-  crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method)["crit.val.mid"]
+  crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
   
   # Calculate exact power
   df %>%
@@ -375,16 +323,16 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
         x_C = 0:n_C,
         x_E = 0:n_E
       ) %>%
-        teststat(n_C = n_C, n_E = n_E, delta = delta, method = method) ->
+        teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better = better) ->
         df
       
       # Calculate raised nominal level
-      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method)["crit.val.mid"]
+      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
       
       # Calculate exact power
       df %>%
         mutate(reject = stat <= crit.val) %>%
-        power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+        power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
         exact_power
     }
     # Go one step back
@@ -503,4 +451,40 @@ samplesize_exact(p_EA, p_CA, delta = 0.8, alpha, beta = 0.2, r = 1, size_acc = 3
 
 max(p_value(15, 15, 50, 50, method = "RD", delta = 0.1, size_acc = 3))
 max(p_value(20, 15, 50, 50, method = "RR", delta = 0.8, size_acc = 3))
+
+
+# Example 8.6
+p_CA = 0.4
+p_EA = 0.4
+delta = 0.105
+r = 2
+alpha = 0.025
+beta = 0.15
+samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, method = "RD")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RD")
+
+
+p_CA = 0.32
+p_EA = 0.32
+delta = 0.095
+r = 2
+alpha = 0.025
+beta = 0.2
+samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RD")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RD")
+
+
+# stimmt beides für r = 1, r = 2
+
+# Example 8.7
+p_CA = 0.0385
+p_EA = 0.155
+delta = 0.8
+r = 1
+alpha = 0.025
+beta = 0.2
+samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RR")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RR", better = "high")
+
+teststat(df, n_E, n_C, delta, method = "RR", better = "low")
 
