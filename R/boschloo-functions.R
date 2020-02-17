@@ -24,12 +24,35 @@
 ##                        p_value: Calculate p-value for NI (superiority is
 ##                          special case with gamma = 1)
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2019-07-08
+##   Date of last update: 2020-02-17
 ##                Author: Samuel Kilian
 ##..............................................................................
 
 
 ## Functions ###################################################################
+## Checks       ################################################################
+check.0.1 <- function(
+  values,           # vector of values that shall lie in the interval (0, 1)
+  message           # error message to display if one of the values doesn't lie
+                    # in (0,1)
+){
+  # Check whether values all lie in interval (0, 1) and output error message if not
+  if (any(values <= 0 | values >= 1)) {
+    stop(message)
+  }
+}
+
+check.pos.int <- function(
+  values,           # vector of values that shall be positive integers
+  message           # error message to display if one of the values is not a
+                    # positive integer
+){
+  # Check whether values all are positive integers and output error message if not
+  if (any(values %% 1 != 0 | values <= 0)) {
+    stop(message)
+  }
+}
+
 ## Superiority #################################################################
 # Test problem:
 # H_0: p_E <= p_C
@@ -180,7 +203,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
       max() ->
       max.size
   }
-  # Creaste grid for p with specified accuracy to compute maximum size with
+  # Create grid for p with specified accuracy to compute maximum size with
   # desired accuracy
   p <- seq(0, 1, by = 10^-size_acc)
   # Compute maximum size
@@ -268,13 +291,37 @@ samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
   )
 }
 
-samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4){
+samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, alternative = "greater"){
   # Calculate exact sample size for Fisher-Boschloo test and specified
   # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
   # Accuracy of calculating the critical value can be specified by size_acc.
   # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
-  if (p_CA >= p_EA) {
+  
+  # Check if input is correctly specified
+  check.0.1(
+    c(p_EA, p_CA, alpha, beta),
+    "p_EA, p_CA, alpha, beta have to lie in interval (0,1)."
+  )
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+  }
+  
+  if (p_CA >= p_EA & alternative == "greater") {
     stop("p_EA has to be greater than p_CA.")
+  }
+  
+  if (alternative == "less") {
+    if (p_EA >= p_CA) {
+      stop("p_CA has to be greater than p_EA.")
+    }
+    # Inverse p_EA and p_CA to test the switched hypothesis
+    p_EA <- 1-p_EA
+    p_CA <- 1-p_CA
   }
   
   # Estimate sample size with approximate formula
