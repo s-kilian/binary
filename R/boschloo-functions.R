@@ -307,8 +307,24 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
     "size_acc has to be positive integer."
   )
   
+  if (
+    any(
+      sapply(
+        list(p_EA, p_CA, alpha, beta, r, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (r <= 0) {
+    stop("r has to be greater than 0.")
+  }
+  
   if (!(alternative %in% c("less", "greater"))) {
     warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
   }
   
   if (p_CA >= p_EA & alternative == "greater") {
@@ -653,16 +669,57 @@ samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
   )
 }
 
-samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3){
+samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3, alternative = "greater"){
   # Calculate exact sample size for Fisher-Boschloo test and specified
   # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
   # OR-NI-margin gamma.
   # Accuracy of calculating the critical value can be specified by size_acc.
   # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
   
-  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma) {
+  # Check if input is correctly specified
+  check.0.1(
+    c(p_EA, p_CA, alpha, beta),
+    "p_EA, p_CA, alpha, beta have to lie in interval (0,1)."
+  )
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
+  
+  if (
+    any(
+      sapply(
+        list(p_EA, p_CA, gamma, alpha, beta, r, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (any(c(r, gamma) <= 0)) {
+    stop("r and gamma have to be positive.")
+  }
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
+  }
+
+  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma & alternative == "greater") {
     stop("OR(p_EA, p_CA) has to be greater than gamma.")
   }
+  
+  if (alternative == "less") {
+    if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) >= gamma) {
+      stop("OR(p_EA, p_CA) has to be smaller than gamma.")
+    }
+    # Inverse p_EA, p_CA and gamma to test the switched hypothesis
+    p_EA <- 1-p_EA
+    p_CA <- 1-p_CA
+    gamma <- 1/gamma
+  }
+
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_Wang(
