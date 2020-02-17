@@ -32,13 +32,13 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   w <- 1/3 * (pi + acos(ifelse(u == 0, 0, round(v/u^3, 10))))   # das round wurde eingebaut, weil wenn bei v/u^3 etwas minimal gr??er als 1 rauskommt es zu einer Fehlermeldung kommt! 
   # Define the solution
   p_E0 <- 2*u*cos(w) - b/(3*a)
-  p_C0 <- p_E0 - (-delta)
+  p_C0 <- p_E0 + delta
   
   if (better == "high"){
    return <-  ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
   }
   if (better == "low"){
-    return <- -ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+    return <- ifelse(p_E - p_C + delta == 0, 0, (p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
   }
   return(return)
   
@@ -64,7 +64,7 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
     return <- ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
   }
   if (better == "low"){
-    return <- -ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+    return <- ifelse(p_E - delta * p_C == 0, 0, (p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
   }
     return(return)
 }
@@ -362,16 +362,16 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       x_C = 0:n_C,
       x_E = 0:n_E
     ) %>%
-      teststat(n_C = n_C, n_E = n_E, delta = delta, method = method) ->
+      teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better = better) ->
       df
     
     # Calculate raised nominal level
-    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method)["crit.val.mid"]
+    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
     
     # Calculate exact power
     df %>%
       mutate(reject = stat <= crit.val) %>%
-      power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+      power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
       exact_power
   }
   
@@ -403,7 +403,7 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
     x_C = 0:n_C,
     x_E = 0:n_E
   ) %>%
-    teststat(n_E, n_C, delta, method) %>%
+    teststat(n_E, n_C, delta, method, better) %>%
     mutate(
       reject = stat <= stat[x_E == x_E. & x_C == x_C.]
     ) %>%
@@ -416,75 +416,105 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
 
 
 
-
-# Funktionsaufruf:
-
-n_E = 22
-n_C = 18
-
-df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
-method = "RR"
-delta = 0.7
-
-method = "RD"
-delta = 0.1
-alpha = 0.05
-
-cv <- critval(alpha = alpha, n_C = n_C, n_E = n_E, method = method, delta = delta, size_acc = 4)
-
-p_CA = c(0.5)
-p_EA = c(0.7)
-
-reject <- teststat(df, n_E, n_C, delta, method)$stat < cv$crit.val.mid
-df <- data.frame(df, reject = reject)
-
-power(df, n_C, n_E, p_CA, p_EA)
-
-
-samplesize_appr(p_EA, p_CA, delta = 0.1, alpha, beta=0.2, r=1, method = "RD")
-samplesize_exact(p_EA, p_CA, delta = 0.1, alpha, beta = 0.2, r = 1, size_acc = 3, method = "RD")  
-
-
-samplesize_appr(p_EA, p_CA, delta = 0.8, alpha, beta=0.2, r = 1, method = "RR")
-samplesize_exact(p_EA, p_CA, delta = 0.8, alpha, beta = 0.2, r = 1, size_acc = 3, method = "RR")
+samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
   
+  if(method == "RD"){
+    theta <- 1/r
+    
+    a <- 1 + theta
+    b <- -(1 + theta + p_EA + theta * p_CA - delta * (theta + 2))
+    c <- delta^2 - delta * (2*p_EA + theta + 1) + p_EA + theta * p_CA
+    d <- p_EA * delta * (1 - delta)
+    
+    # Define the parameters for solving the equation
+    v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
+    u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
+    w <- 1/3 * (pi + acos(v/u^3))
+    
+    # Define the solution
+    p_E0 <- 2*u*cos(w) - b/(3*a)
+    p_C0 <- p_E0 + delta
+    
+    z_alpha <- qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- qnorm(1 - beta, mean = 0, sd = 1)
+    
+    # Calculating the sample size
+    n <- (1+r) / r * (z_alpha * sqrt(r * p_C0 * (1 - p_C0) + p_E0 * (1-p_E0))
+                      + z_beta * sqrt(r * p_CA * (1 - p_CA) + p_EA * (1-p_EA)))^2 / 
+      (p_EA - p_CA + delta)^2
+    
+    n_C <- ceiling(1/(1+r) * n)
+    n_E <- ceiling(r/(1+r) * n)
+    n_total <- n_E + n_C
+  }
+  
+  
+  if(method == "RR"){
+    
+    theta <- 1/r
+    
+    a <- 1 + theta
+    b <- -(delta*(1 + theta*p_CA) + theta + p_EA)
+    c <- delta * (p_EA + theta * p_CA)
+    
+    # Define the solution
+    p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
+    p_C0 <- p_E0 / delta
+    
+    z_alpha <- qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- qnorm(1 - beta, mean = 0, sd = 1)
+    
+    # Calculating the sample size
+    n <- (1+r) / r * (z_alpha * sqrt(r * delta^2 * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
+                      + z_beta * sqrt(r * delta^2 * p_CA * (1 - p_CA) + p_EA * (1 - p_EA)))^2 / 
+      (p_EA - delta * p_CA)^2
+    
+    n_C <- ceiling(1/(1+r) * n)
+    n_E <- ceiling(r/(1+r) * n)
+    n_total<- n_E + n_C
+    
+  }
+  
+  
+  return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C))
+}
 
-max(p_value(15, 15, 50, 50, method = "RD", delta = 0.1, size_acc = 3))
-max(p_value(20, 15, 50, 50, method = "RR", delta = 0.8, size_acc = 3))
+
 
 
 # Example 8.6
 p_CA = 0.4
 p_EA = 0.4
-delta = 0.105
-r = 2
+delta = -0.105
 alpha = 0.025
 beta = 0.15
-samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, method = "RD")
-samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RD")
+#samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, method = "RD")
+#samplesize_FM_diff_rates(p_EA, p_CA, delta = -delta, better = "low", alpha, beta, r)
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 2, size_acc = 3, method = "RD", better = "low")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 1, size_acc = 3, method = "RD", better = "low")
 
 
 p_CA = 0.32
 p_EA = 0.32
-delta = 0.095
-r = 2
+delta = -0.095
 alpha = 0.025
 beta = 0.2
-samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RD")
-samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RD")
+#samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RD")
+#samplesize_FM_diff_rates(p_EA, p_CA, delta = -delta, better = "low", alpha, beta, r)
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 2, size_acc = 3, method = "RD", better = "low")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 1, size_acc = 3, method = "RD", better = "low")
 
-
-# stimmt beides für r = 1, r = 2
 
 # Example 8.7
-p_CA = 0.0385
-p_EA = 0.155
-delta = 0.8
-r = 1
+p_EA = 0.0385
+p_CA = 0.055
+delta = 1/1.25
 alpha = 0.025
-beta = 0.2
-samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RR")
-samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = r, size_acc = 3, method = "RR", better = "high")
+beta = 0.08
+#samplesize_appr(p_EA, p_CA, delta = delta, alpha = alpha, beta=beta, r=r, method = "RR")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 1, size_acc = 3, method = "RR", better = "low")
+samplesize_exact(p_EA, p_CA, delta = delta, alpha = alpha, beta = beta, r = 2, size_acc = 3, method = "RR", better = "low")
 
-teststat(df, n_E, n_C, delta, method = "RR", better = "low")
+
+
 
