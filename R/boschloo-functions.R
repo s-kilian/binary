@@ -24,13 +24,13 @@
 ##                        p_value: Calculate p-value for NI (superiority is
 ##                          special case with gamma = 1)
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2020-02-17
+##   Date of last update: 2020-02-18
 ##                Author: Samuel Kilian
 ##..............................................................................
 
 
 ## Superiority #################################################################
-# Test problem:
+# Default test problem (alternative = "greater"):
 # H_0: p_E <= p_C
 # H_1: p_E > p_C
 
@@ -430,7 +430,7 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
 }
 
 # Non-Inferiority ##############################################################
-# Test problem:
+# Default test problem (alternative = "greater"):
 # H_0: OR(p_E, p_A) <= gamma
 # H_1: OR(p_E, p_A) > gamma
 # with 0 < gamma < 1
