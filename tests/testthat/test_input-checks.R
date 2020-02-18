@@ -1,7 +1,5 @@
 context("Test of input check functions")
 
-library(tidyverse)
-
 ## Check (0, 1) ################################################################
 test_that("Interval check gives appropriate errors", {
   expect_error(check.0.1(c(0.5, 1), "errmess"), "errmess")

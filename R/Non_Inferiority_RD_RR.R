@@ -433,8 +433,8 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     p_E0 <- 2*u*cos(w) - b/(3*a)
     p_C0 <- p_E0 + delta
     
-    z_alpha <- qnorm(1 - alpha, mean = 0, sd = 1)
-    z_beta <- qnorm(1 - beta, mean = 0, sd = 1)
+    z_alpha <- stats::qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- stats::qnorm(1 - beta, mean = 0, sd = 1)
     
     # Calculating the sample size
     n <- (1+r) / r * (z_alpha * sqrt(r * p_C0 * (1 - p_C0) + p_E0 * (1-p_E0))
@@ -459,8 +459,8 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
     p_C0 <- p_E0 / delta
     
-    z_alpha <- qnorm(1 - alpha, mean = 0, sd = 1)
-    z_beta <- qnorm(1 - beta, mean = 0, sd = 1)
+    z_alpha <- stats::qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- stats::qnorm(1 - beta, mean = 0, sd = 1)
     
     # Calculating the sample size
     n <- (1+r) / r * (z_alpha * sqrt(r * delta^2 * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
