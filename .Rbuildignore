@@ -3,3 +3,4 @@
 ^codecov\.yml$
 ^\.travis\.yml$
 ^template.R$
+^example8.6.R$
