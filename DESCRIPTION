@@ -1,16 +1,18 @@
 Package: binary
 Type: Package
-Title: Functions around the Fisher-Boschloo test
+Title: Exact tests for two proportions
 Version: 0.1.0
-Author: Samuel Kilian
-Maintainer: Samuel Kilian <kilain@imbi.uni-heidelberg.de>
-Description: Fisher-Boschloo test for superiority and non-inferiority,
+Author: Samuel Kilian <kilian@imbi.uni-heidelberg.de> and Laura Benner <benner@imbi.uni-heidelberg.de>
+Maintainer: Samuel Kilian <kilian@imbi.uni-heidelberg.de>
+Description: Exact tests for superiority and non-inferiority of two proportions,
     power and sample size calculations.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports:
-    tidyverse,
+    magrittr,
+    dplyr,
     BiasedUrn
 Suggests: 
     testthat
+RoxygenNote: 7.0.2

@@ -12,8 +12,6 @@
 ## Functions ###################################################################
 
 
-library(tidyverse)
-
 # function to calculate test statistic for Risk Difference
 test_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
@@ -81,14 +79,14 @@ teststat <- function(df, n_E, n_C, delta, method, better){
   # small values of stat favor the alternative.
   if (method == "RR") {
     return = df %>%
-      mutate(
+      dplyr::mutate(
         stat = test_RR(x_E, x_C, n_E, n_C, delta, better)
       ) 
   }
    
   if (method == "RD") {
     return = df %>%
-      mutate(
+      dplyr::mutate(
         stat = test_RD(x_E, x_C, n_E, n_C, delta, better)
       )
   }
@@ -122,7 +120,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     x_E = 0:n_E
   ) %>%
     teststat(n_E, n_C, delta, method, better) %>%
-    arrange(stat) ->
+    dplyr::arrange(stat) ->
     df.stat
   
   # Extract stat, x_C and x_E as vector
@@ -132,7 +130,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   
   # Find starting value for the search of critical value. E.g. take the
   # quantile of the approximate distribution of stat
-  start_value <- -qnorm(1-alpha) 
+  start_value <- -stats::qnorm(1-alpha) 
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
@@ -154,7 +152,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   # Calculate exact size for every pair (p_C, p_E)
   sapply(
     1:length(p_C),
-    function(j) dbinom(x_C[1:i], n_C, p_C[j])*dbinom(x_E[1:i], n_E, p_E[j])
+    function(j) stats::dbinom(x_C[1:i], n_C, p_C[j])*stats::dbinom(x_E[1:i], n_E, p_E[j])
   ) ->
     size.vec
   
@@ -163,7 +161,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     i <- i+1
     
     # Compute new sizes
-    size.vec <- rbind(size.vec, dbinom(x_C[i], n_C, p_C)*dbinom(x_E[i], n_E, p_E))
+    size.vec <- rbind(size.vec, stats::dbinom(x_C[i], n_C, p_C)*stats:.dbinom(x_E[i], n_E, p_E))
   }
   
   # Decrease index if maximal size is too high and iterate grid accuracy
@@ -181,7 +179,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     
     sapply(
       1:length(p_C),
-      function(j) dbinom(x_C[1:i], n_C, p_C[j])*dbinom(x_E[1:i], n_E, p_E[j])
+      function(j) stats::dbinom(x_C[1:i], n_C, p_C[j])*stats::dbinom(x_E[1:i], n_E, p_E[j])
     ) ->
       size.vec
     
@@ -195,7 +193,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
  
   # Decrease index further as long as rows have the same test statistic value
   while (stat[i+1] == stat[i] & i >= 1) {
-    size.vec <- size.vec - dbinom(x_C[i], n_C, p_C)*dbinom(x_E[i], n_E, p_E)
+    size.vec <- size.vec - stats::dbinom(x_C[i], n_C, p_C)*stats::dbinom(x_E[i], n_E, p_E)
     i <- i-1
   }
   
@@ -221,8 +219,8 @@ power <- function(df, n_C, n_E, p_CA, p_EA, better){
   # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
   
   if (
-    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
+    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -240,9 +238,9 @@ power <- function(df, n_C, n_E, p_CA, p_EA, better){
     1:length(p_CA),
     function(i) {
       df %>%
-        filter(reject) %>%
-        mutate(prob = dbinom(x_C, n_C, p_CA[i])*dbinom(x_E, n_E, p_EA[i])) %>%
-        pull(prob) %>%
+        dplyr::filter(reject) %>%
+        dplyr::mutate(prob = stats::dbinom(x_C, n_C, p_CA[i])*stats::dbinom(x_E, n_E, p_EA[i])) %>%
+        dplyr::pull(prob) %>%
         sum()
     }
   ) ->
@@ -298,7 +296,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
   
   # Calculate exact power
   df %>%
-    mutate(reject = stat <= crit.val) %>%
+    dplyr::mutate(reject = stat <= crit.val) %>%
     power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
     exact_power
   
@@ -331,7 +329,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       
       # Calculate exact power
       df %>%
-        mutate(reject = stat <= crit.val) %>%
+        dplyr::mutate(reject = stat <= crit.val) %>%
         power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
         exact_power
     }
@@ -370,7 +368,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     
     # Calculate exact power
     df %>%
-      mutate(reject = stat <= crit.val) %>%
+      dplyr::mutate(reject = stat <= crit.val) %>%
       power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
       exact_power
   }
@@ -404,7 +402,7 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
     x_E = 0:n_E
   ) %>%
     teststat(n_E, n_C, delta, method, better) %>%
-    mutate(
+    dplyr::mutate(
       reject = stat <= stat[x_E == x_E. & x_C == x_C.]
     ) %>%
     power(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
