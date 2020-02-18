@@ -187,46 +187,6 @@ expect_equal(df$n.ex, df$n.ex.2, tolerance = .5, scale = 1)
 
 
 
-test_that("Sample size for Fisher's exact test can be reproduced", {
-  
-# Exact sample size for Fisher's exact test: According to [Boschloo, 1970], the
-# exact sample size for alpha = 0.01, power = 0.0754 (0.6086, 0.5267, 0.7646), 
-# and true rates p1 = 0.3 (0.6, 0.7, 0.9), p0 = 0.1 (0.1, 0.2, 0.2) is 15/group.
-# Compared to [Boschloo, 1970], we decreased the power by 0.0001 to account for
-# rounding.
-data.frame(
-  n = rep(30, 4),
-  p1 = c(0.3, 0.6, 0.7, 0.8),
-  p0 = c(0.1, 0.1, 0.2, 0.2),
-  alpha = rep(0.01, 4),
-  power = c(
-    0.0754,
-    0.6086, 
-    0.5267,
-    0.7646
-  )
-) ->
-  df
-# Compute exact sample size with function Calculate.exact.Fisher.sample.size()
-df %>%
-  mutate(
-    n.2 = as.vector(
-      sapply(
-      1:length(p1),
-      function(i) samplesize_exact_Fisher(alpha = alpha[i], beta = 1-power[i], r = 1, p_CA = p0[i], p_EA = p1[i]) %>%
-        (function(x) x[["n_C"]]+x[["n_E"]])
-    ))
-  ) -> df
-
-
-expect_equal(df$n, df$n.2, tolerance = .5, scale = 1)
-
-
-})
-
-
-
-
 
 test_that("Non-inferiority example", {
 
