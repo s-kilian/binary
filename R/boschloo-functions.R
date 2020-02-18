@@ -39,8 +39,8 @@ teststat_boschloo <- function(df, n_C, n_E){
   # response pairs for group sizes n_C and n_E and add test statistic (conditional
   # fisher p-values for H_0: p_E <= p_C).
   if (
-    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
+    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -48,11 +48,11 @@ teststat_boschloo <- function(df, n_C, n_E){
   # Compute p-values of Fisher's exact test from hypergeometric distribution
   # for every s
   df %>%
-    mutate(s = x_C+x_E) %>%
-    group_by(s) %>%
-    do(
+    dplyr::mutate(s = x_C+x_E) %>%
+    dplyr::group_by(s) %>%
+    dplyr::do(
       .,
-      mutate(
+      dplyr::mutate(
         .,
         cond_p = phyper(x_C, n_C, n_E, s[1])
       )
@@ -84,7 +84,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
     p.value = unlist(p.value.list),
     s = rep(s.area, c(1:min(n_C, n_E), rep(min(n_C, n_E)+1, max(n_C, n_E)-min(n_C, n_E)+1), n+1-(max(n_C, n_E)+1):n))
   ) %>%
-    arrange(p.value, s) ->
+    dplyr::arrange(p.value, s) ->
     ordered.p.values
   
   # Vector of p-values and vector of s
@@ -97,10 +97,10 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # Calculate boundaries c(s) of rejection region for every s for first critical 
   # value = alpha
   ordered.p.values %>%
-    group_by(s) %>%
-    summarise(c = suppressWarnings(max(p.value[p.value <= alpha]))) %>%
-    arrange(s) %>%
-    pull(c) ->
+    dplyr::group_by(s) %>%
+    dplyr::summarise(c = suppressWarnings(max(p.value[p.value <= alpha]))) %>%
+    dplyr::arrange(s) %>%
+    dplyr::pull(c) ->
     start.bounds
   
   # Determine rough approximation of critical value iteratively
@@ -123,7 +123,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
     # Determine maximal size for the specific p-values
     size <- 0
     for (p in max.ps) {
-      sum(bounds[bounds != -Inf]*dbinom(s.area[bounds != -Inf], n, p)) %>%
+      sum(bounds[bounds != -Inf]*stats::dbinom(s.area[bounds != -Inf], n, p)) %>%
         max(c(size, .)) ->
         size
     }
@@ -154,7 +154,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # Compute size for every p in grid and take maximum
   sapply(
     p,
-    function(x) sum(bounds[bounds != -Inf]*dbinom(s.area[bounds != -Inf], n, x))
+    function(x) sum(bounds[bounds != -Inf]*stats::dbinom(s.area[bounds != -Inf], n, x))
   ) %>%
     max() ->
     max.size
@@ -174,7 +174,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
     }
     sapply(
       p,
-      function(x) sum(bounds[bounds != -Inf]*dbinom(s.area[bounds != -Inf], n, x))
+      function(x) sum(bounds[bounds != -Inf]*stats::dbinom(s.area[bounds != -Inf], n, x))
     ) %>%
       max() ->
       max.size
@@ -185,7 +185,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # Compute maximum size
   sapply(
     p,
-    function(x) sum(bounds[bounds != -Inf]*dbinom(s.area[bounds != -Inf], n, x))
+    function(x) sum(bounds[bounds != -Inf]*stats::dbinom(s.area[bounds != -Inf], n, x))
   ) %>%
     max() ->
     max.size
@@ -204,7 +204,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
     }
     sapply(
       p,
-      function(x) sum(bounds[bounds != -Inf]*dbinom(s.area[bounds != -Inf], n, x))
+      function(x) sum(bounds[bounds != -Inf]*stats::dbinom(s.area[bounds != -Inf], n, x))
     ) %>%
       max() ->
       max.size
@@ -223,8 +223,8 @@ power_boschloo <- function(df, n_C, n_E, p_CA, p_EA){
   # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
   
   if (
-    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
+    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -242,9 +242,9 @@ power_boschloo <- function(df, n_C, n_E, p_CA, p_EA){
     1:length(p_CA),
     function(i) {
       df %>%
-        filter(reject) %>%
-        mutate(prob = dbinom(x_C, n_C, p_CA[i])*dbinom(x_E, n_E, p_EA[i])) %>%
-        pull(prob) %>%
+        dplyr::filter(reject) %>%
+        dplyr::mutate(prob = stats::dbinom(x_C, n_C, p_CA[i])*stats::dbinom(x_E, n_E, p_EA[i])) %>%
+        dplyr::pull(prob) %>%
         sum()
     }
   ) ->
@@ -342,7 +342,7 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
   
   # Calculate exact power for starting values
   df %>%
-    mutate(reject = cond_p <= nom_alpha) %>%
+    dplyr::mutate(reject = cond_p <= nom_alpha) %>%
     power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
     exact_power
   
@@ -375,7 +375,7 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond_p <= nom_alpha) %>%
+        dplyr::mutate(reject = cond_p <= nom_alpha) %>%
         power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
         exact_power
     }
@@ -414,7 +414,7 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond_p <= nom_alpha) %>%
+      dplyr::mutate(reject = cond_p <= nom_alpha) %>%
       power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
       exact_power
   }
@@ -429,6 +429,7 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, 
   )
 }
 
+
 # Non-Inferiority ##############################################################
 # Default test problem (alternative = "greater"):
 # H_0: OR(p_E, p_A) <= gamma
@@ -440,8 +441,8 @@ teststat_boschloo_NI <- function(df, n_C, n_E, gamma){
   # response pairs for group sizes n_C and n_E and add conditional fisher p-values
   # for H_0: OR(p_E, p_A) <= gamma.
   if (
-    n_C+1 != df %>% pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% pull(x_E) %>% unique() %>% length()
+    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -449,11 +450,11 @@ teststat_boschloo_NI <- function(df, n_C, n_E, gamma){
   # Compute p-values of Fisher's exact test from Fisher's noncentral 
   # hypergeometric distribution for every s
   df %>%
-    mutate(s = x_C+x_E) %>%
-    group_by(s) %>%
-    do(
+    dplyr::mutate(s = x_C+x_E) %>%
+    dplyr::group_by(s) %>%
+    dplyr::do(
       .,
-      mutate(
+      dplyr::mutate(
         .,
         cond_p = BiasedUrn::pFNCHypergeo(x_C, n_C, n_E, s[1], 1/gamma)
       )
@@ -485,7 +486,7 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
     p.value = unlist(p.value.list),
     s = rep(s.area, c(1:min(n_C, n_E), rep(min(n_C, n_E)+1, max(n_C, n_E)-min(n_C, n_E)+1), n+1-(max(n_C, n_E)+1):n))
   ) %>%
-    arrange(p.value, s) ->
+    dplyr::arrange(p.value, s) ->
     ordered.p.values
   
   # Vector of p-value and vector of s
@@ -498,10 +499,10 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   # Calculate boundaries c(s) of rejection region for every s for first critical 
   # value = alpha
   ordered.p.values %>%
-    group_by(s) %>%
-    summarise(c = suppressWarnings(max(p.value[p.value <= alpha]))) %>%
-    arrange(s) %>%
-    pull(c) ->
+    dplyr::group_by(s) %>%
+    dplyr::summarise(c = suppressWarnings(max(p.value[p.value <= alpha]))) %>%
+    dplyr::arrange(s) %>%
+    dplyr::pull(c) ->
     start.bounds
   
   # Determine maximal nominal alpha iteratively
@@ -724,7 +725,7 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
   
   # Calculate exact power
   df %>%
-    mutate(reject = cond_p <= nom_alpha) %>%
+    dplyr::mutate(reject = cond_p <= nom_alpha) %>%
     power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
     exact_power
   
@@ -757,7 +758,7 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
       
       # Calculate exact power
       df %>%
-        mutate(reject = cond_p <= nom_alpha) %>%
+        dplyr::mutate(reject = cond_p <= nom_alpha) %>%
         power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
         exact_power
     }
@@ -796,7 +797,7 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
     
     # Calculate exact power
     df %>%
-      mutate(reject = cond_p <= nom_alpha) %>%
+      dplyr::mutate(reject = cond_p <= nom_alpha) %>%
       power_boschloo(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
       exact_power
   }
@@ -863,8 +864,8 @@ p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3, alternative = "gr
     x_E = 0:n_E
   ) %>%
     teststat_boschloo_NI(n_E = n_E, n_C = n_C, gamma = gamma) %>%
-    ungroup() %>%
-    mutate(
+    dplyr::ungroup() %>%
+    dplyr::mutate(
       reject = cond_p <= cond_p[x_E == x_E. & x_C == x_C.]
     ) %>%
     power_boschloo(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value

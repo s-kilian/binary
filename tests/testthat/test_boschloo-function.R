@@ -1,8 +1,7 @@
 context("Test results from literature")
 
-library(tidyverse)
 
-## Power                    ####################################################
+## Testing function results ####################################################
 # Superiority
 
 test_that("Boschloo-Power can be reproduced", {
@@ -34,7 +33,7 @@ data.frame(
   df
 # Compute power with function power_boschloo():
 df %>%
-  mutate(
+  dplyr::mutate(
     power2 = as.vector(
       sapply(
       1:length(n_E),
@@ -44,7 +43,7 @@ df %>%
           x_E = 0:n_E[i]
         ) %>%
           teststat_boschloo(n_C = n_C[i], n_E = n_E[i]) %>%
-          mutate(
+          dplyr::mutate(
             reject = cond_p <= critval_boschloo(alpha = alpha[i], n_C = n_C[i], n_E = n_E[i], size_acc = 3)["nom_alpha_mid"]
           ),
         n_C = n_C[i],
@@ -87,7 +86,7 @@ data.frame(
   df
 # Compute approximate sample size with function samplesize_normal_appr()
 df %>%
-  mutate(
+  dplyr::mutate(
     n.appr.2 = as.vector(
       sapply(
       1:length(p1),
@@ -129,7 +128,7 @@ data.frame(
   df
 # Compute exact sample size with function samplesize_exact_boschloo()
 df %>%
-  mutate(
+  dplyr::mutate(
     n.ex.2 = as.vector(
       sapply(
       1:length(p1),
@@ -172,7 +171,7 @@ data.frame(
   df
 # Compute exact sample size with function samplesize_exact_boschloo()
 df %>%
-  mutate(
+  dplyr::mutate(
     n.ex.2 = as.vector(
       sapply(
       1:length(p1),
