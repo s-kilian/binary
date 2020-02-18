@@ -130,7 +130,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   
   # Find starting value for the search of critical value. E.g. take the
   # quantile of the approximate distribution of stat
-  start_value <- -qnorm(1-alpha) 
+  start_value <- -stats::qnorm(1-alpha) 
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
