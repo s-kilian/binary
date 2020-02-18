@@ -2,10 +2,10 @@ context("Test results from literature")
 
 library(tidyverse)
 
-test_that("Power can be reproduced", {
-
-## Testing function results ####################################################
+## Power                    ####################################################
 # Superiority
+
+test_that("Boschloo-Power can be reproduced", {
 # Raised nominal level and exact maximal size: According to [Boschloo, 1970],
 # the raised nominal level for sample sizes 10 and 15 and true level alpha = 0.05
 # can be chosen as approximately 0.09
