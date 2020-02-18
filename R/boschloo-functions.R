@@ -835,8 +835,46 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
   )
 }
 
-p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3){
+p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3, alternative = "greater"){
   # Calculate p-values for a specific result (x_E., x_C.)
+  
+  # Check if input is correctly specified
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
+  check.pos.int(
+    c(x_E.+1, x_C.+1, n_E, n_C, n_E-x_E.+1, n_C-x_C.+1),
+    "n_E, n_C have to be positive integers and x_E. in {0, ..., n_E}, x_C. in {0, ..., n_C}."
+  )
+  
+  if (
+    any(
+      sapply(
+        list(x_E., x_C., n_E, n_C, gamma, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (gamma <= 0) {
+    stop("gamma has to be positive.")
+  }
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
+  }
+  
+  if (alternative == "less") {
+    # Inverse values for other-sided hypothesis
+    x_E. <- n_E - x_E.
+    x_C. <- n_C - x_C.
+    gamma <- 1/gamma
+  }
+  
   # Define grid for p_C
   p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
   
