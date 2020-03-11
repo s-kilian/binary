@@ -149,20 +149,16 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   p_C <- p_C[p_E >= 0 & p_E <= 1]
   p_E <- p_E[p_E >= 0 & p_E <= 1]
   
-  # Calculate exact size for every pair (p_C, p_E)
-  sapply(
-    1:length(p_C),
-    function(j) stats::dbinom(x_C[1:i], n_C, p_C[j])*stats::dbinom(x_E[1:i], n_E, p_E[j])
-  ) ->
-    size.vec
-  
+  # Calculate exact size for pair (p_C[i], p_E[i])
+  pr <- sapply(1:length(p_C), function(j)
+    sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
+
   # Increase index if maximal size is too low
-  while (max(apply(size.vec, 2, sum)) <= alpha) {
+  while (max(pr) <= alpha) {
     i <- i+1
-    
-    # Compute new sizes
-    size.vec <- rbind(size.vec, stats::dbinom(x_C[i], n_C, p_C)*stats:.dbinom(x_E[i], n_E, p_E))
+    pr <- pr + stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
   }
+  
   
   # Decrease index if maximal size is too high and iterate grid accuracy
   for (acc in 1:size_acc) {
@@ -177,23 +173,21 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     p_C <- p_C[p_E >= 0 & p_E <= 1]
     p_E <- p_E[p_E >= 0 & p_E <= 1]
     
-    sapply(
-      1:length(p_C),
-      function(j) stats::dbinom(x_C[1:i], n_C, p_C[j])*stats::dbinom(x_E[1:i], n_E, p_E[j])
-    ) ->
-      size.vec
+    pr <- sapply(1:length(p_C), function(j)
+      sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
     
     # Decrease index if maximal size is too high
-    while (max(apply(size.vec, 2, sum)) > alpha & i >= 1) {
+    while (max(pr) > alpha & i >= 1) {
       # Compute new sizes
-      size.vec <- size.vec[-i,]
+      pr <- pr - stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
       i <- i-1
     }
+    
   }
  
   # Decrease index further as long as rows have the same test statistic value
   while (stat[i+1] == stat[i] & i >= 1) {
-    size.vec <- size.vec - stats::dbinom(x_C[i], n_C, p_C)*stats::dbinom(x_E[i], n_E, p_E)
+    pr <- pr - stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
     i <- i-1
   }
   
@@ -206,7 +200,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
       crit.val.lb = stat[i],
       crit.val.mid = crit.val.mid,
       crit.val.ub = stat[i+1],
-      max.size = max(apply(size.vec, 2, sum))
+      max.size = max(pr)
     )
   )
 }
