@@ -253,10 +253,20 @@ power_boschloo <- function(df, n_C, n_E, p_CA, p_EA){
   return(result)
 }
 
+
+#' Calculate approximate sample size for normal approximation test
+#' 
+#' Calculate approximate sample size for normal approximation test for specified
+#' level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+#' 
+#'@return Sample sizes per group (n_C, n_E).
+#' 
+#' @template p_A
+#' @template error_rate
+#' @template r
+#' 
+#' @export
 samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
-  # Calculate approximate sample size for normal approximation test for specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Output: Sample sizes per group (n_C, n_E).
   p_0 <- (p_CA + r*p_EA)/(1+r)
   Delta_A <- p_EA - p_CA
   n_C <- ceiling(1/r*(stats::qnorm(1-alpha)*sqrt((1+r)*p_0*(1-p_0)) + stats::qnorm(1-beta)*sqrt(r*p_CA*(1-p_CA) + p_EA*(1-p_EA)))^2  / Delta_A^2)
@@ -267,12 +277,23 @@ samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
   )
 }
 
+
+#' Calculate exact sample size for Fisher-Boschloo test 
+#' 
+#' Calculate exact sample size for Fisher-Boschloo test and specified
+#' level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+#' Accuracy of calculating the critical value can be specified by size_acc.
+#' 
+#'@return Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+#' 
+#' @template p_A
+#' @template error_rate
+#' @template r
+#' @template size_acc
+#' @template alternative 
+#' 
+#' @export
 samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, alternative = "greater"){
-  # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
-  
   # Check if input is correctly specified
   check.0.1(
     c(p_EA, p_CA, alpha, beta),
@@ -632,11 +653,22 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   return(c(nom_alpha_mid = nom_alpha_mid, size = max.size))
 }
 
+
+#' Calculate approximate sample size for approximate test
+#' 
+#' alculate approximate sample size for approximate test for specified
+#' level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+#' OR-NI.margin gamma.
+#' 
+#'@return Sample sizes per group (n_C, n_E).
+#' 
+#' @template p_A
+#' @template gamma
+#' @template error_rate
+#' @template r
+#' 
+#' @export
 samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
-  # Calculate approximate sample size for approximate test for specified
-  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI.margin gamma.
-  # Output: Sample sizes per group (n_C, n_E).
   theta_A <- p_EA*(1-p_CA)/(p_CA*(1-p_EA))
   n_C <- ceiling(1/r*(stats::qnorm(1-alpha) + stats::qnorm(1-beta))^2 * (1/(p_EA*(1-p_EA)) + r/(p_CA*(1-p_CA))) / (log(theta_A) - log(gamma))^2)
   n_E <- r*n_C %>% ceiling()
@@ -646,13 +678,26 @@ samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
   )
 }
 
+
+#' Calculate exact sample size for Fisher-Boschloo test
+#' 
+#' Calculate exact sample size for Fisher-Boschloo test and specified
+#' level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+#' OR-NI-margin gamma.
+#' 
+#' @details Accuracy of calculating the critical value can be specified by size_acc.
+#' 
+#' @template p_A
+#' @template gamma
+#' @template error_rate
+#' @template r
+#' @template size_acc
+#' @template alternative
+#' 
+#'@return Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+#' 
+#' @export 
 samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3, alternative = "greater"){
-  # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI-margin gamma.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
-  
   # Check if input is correctly specified
   check.0.1(
     c(p_EA, p_CA, alpha, beta),

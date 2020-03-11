@@ -1,1 +1,2 @@
 #' @param gamma TODO
+#' 

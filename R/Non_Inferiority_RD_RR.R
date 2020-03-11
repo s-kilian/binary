@@ -1,17 +1,3 @@
-##..............................................................................
-##               Project: Package binary (working title)
-##               Purpose: Provide template to implement exact test and sample
-##                        size calculation for arbitrary test statistic
-##                 Input: None
-##                Output: None
-##      Date of creation: 2019-07-03
-##   Date of last update: 2019-07-04
-##                Author: Samuel Kilian
-##..............................................................................
-
-## Functions ###################################################################
-
-
 # function to calculate test statistic for Risk Difference
 test_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
@@ -247,14 +233,26 @@ power <- function(df, n_C, n_E, p_CA, p_EA, better){
 
 
 
-# Function to compute exact sample size
+#' Compute exact sample size
+#' 
+#' Calculate exact sample size for method "X and specified
+#' level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+#' OR-NI-margin delta
+#' 
+#' @details Accuracy of calculating the critical value can be specified by size_acc.
+#' 
+#' @return Sample sizes per group (n_C, n_E), critical value and exact power.
+#' 
+#' @template p_A
+#' @template delta
+#' @template error_rate
+#' @template r
+#' @template size_acc
+#' @template method
+#' @template better
+#' 
+#' @export 
 samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
-  # Calculate exact sample size for method "X and specified
-  # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI-margin delta
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E), critical value and exact power.
-  
   # Check wheter p_EA, p_CA lie in the alternative hypothesis
   #if (
   #  p_C.to.p_E(p_CA, method, delta) >= p_EA
@@ -408,7 +406,16 @@ p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3){
 
 
 
-samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
+#' TODO
+#' 
+#' @template p_A
+#' @template delta
+#' @template error_rate
+#' @template r
+#' @template method
+#' 
+#' @export
+samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method) {
   
   if(method == "RD"){
     theta <- 1/r
