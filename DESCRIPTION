@@ -15,4 +15,9 @@ Imports:
     BiasedUrn
 Suggests: 
     testthat
+Collate:
+   binary.R
+   boschloo-functions.R
+   input-checks.R
+   Non_Inferiority_RD_RR.R
 RoxygenNote: 7.0.2
