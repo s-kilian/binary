@@ -24,14 +24,13 @@
 ##                        p_value: Calculate p-value for NI (superiority is
 ##                          special case with gamma = 1)
 ##      Date of creation: 2019-04-04
-##   Date of last update: 2019-07-08
+##   Date of last update: 2020-02-18
 ##                Author: Samuel Kilian
 ##..............................................................................
 
 
-## Functions ###################################################################
 ## Superiority #################################################################
-# Test problem:
+# Default test problem (alternative = "greater"):
 # H_0: p_E <= p_C
 # H_1: p_E > p_C
 
@@ -55,7 +54,7 @@ teststat_boschloo <- function(df, n_C, n_E){
       .,
       dplyr::mutate(
         .,
-        cond_p = phyper(x_C, n_C, n_E, s[1])
+        cond_p = stats::phyper(x_C, n_C, n_E, s[1])
       )
     ) %>%
     return()
@@ -77,7 +76,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # Create list of p.values (test statistic) for every s
   p.value.list <- list()
   for (s in s.area) {
-    p.value.list[[s+1]] <- phyper(max(s-n_E, 0):min(s, n_C), n_C, n_E, s)
+    p.value.list[[s+1]] <- stats::phyper(max(s-n_E, 0):min(s, n_C), n_C, n_E, s)
   }
   
   # Ordered data frame of p-values mapped to every s
@@ -139,7 +138,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
   while(p.values[i-1] == p.values[i] & i > 1){
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
   }
   # Exit function if size of smallest possible rejection region is too high
@@ -148,7 +147,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
     return(c(nom_alpha_mid = 0, size = 0))
   }
   
-  bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+  bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
   i <- i-1
   # Create grid for p with 51 points to compute more accurate maximum of size.
   p <- seq(0, 1, by = 0.02)
@@ -167,10 +166,10 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
       warning("The rejection region of the test is empty.")
       return(c(nom_alpha_mid = 0, size = 0))
     }
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
     while(p.values[i-1] == p.values[i] & i > 1){
-      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
       i <- i-1
     }
     sapply(
@@ -180,7 +179,7 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
       max() ->
       max.size
   }
-  # Creaste grid for p with specified accuracy to compute maximum size with
+  # Create grid for p with specified accuracy to compute maximum size with
   # desired accuracy
   p <- seq(0, 1, by = 10^-size_acc)
   # Compute maximum size
@@ -197,10 +196,10 @@ critval_boschloo <- function(alpha, n_C, n_E, size_acc = 4){
       warning("The rejection region of the test is empty.")
       return(c(nom_alpha_mid = 0, size = 0))
     }
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
     while(p.values[i-1] == p.values[i] & i > 1){
-      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
       i <- i-1
     }
     sapply(
@@ -254,13 +253,23 @@ power_boschloo <- function(df, n_C, n_E, p_CA, p_EA){
   return(result)
 }
 
+
+#' Calculate approximate sample size for normal approximation test
+#' 
+#' Calculate approximate sample size for normal approximation test for specified
+#' level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+#' 
+#'@return Sample sizes per group (n_C, n_E).
+#' 
+#' @template p_A
+#' @template error_rate
+#' @template r
+#' 
+#' @export
 samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
-  # Calculate approximate sample size for normal approximation test for specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Output: Sample sizes per group (n_C, n_E).
   p_0 <- (p_CA + r*p_EA)/(1+r)
   Delta_A <- p_EA - p_CA
-  n_C <- ceiling(1/r*(qnorm(1-alpha)*sqrt((1+r)*p_0*(1-p_0)) + qnorm(1-beta)*sqrt(r*p_CA*(1-p_CA) + p_EA*(1-p_EA)))^2  / Delta_A^2)
+  n_C <- ceiling(1/r*(stats::qnorm(1-alpha)*sqrt((1+r)*p_0*(1-p_0)) + stats::qnorm(1-beta)*sqrt(r*p_CA*(1-p_CA) + p_EA*(1-p_EA)))^2  / Delta_A^2)
   n_E <- r*n_C %>% ceiling()
   
   return(
@@ -268,13 +277,64 @@ samplesize_normal_appr <- function(p_EA, p_CA, alpha, beta, r){
   )
 }
 
-samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4){
-  # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
-  if (p_CA >= p_EA) {
+
+#' Calculate exact sample size for Fisher-Boschloo test 
+#' 
+#' Calculate exact sample size for Fisher-Boschloo test and specified
+#' level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
+#' Accuracy of calculating the critical value can be specified by size_acc.
+#' 
+#'@return Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+#' 
+#' @template p_A
+#' @template error_rate
+#' @template r
+#' @template size_acc
+#' @template alternative 
+#' 
+#' @export
+samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4, alternative = "greater"){
+  # Check if input is correctly specified
+  check.0.1(
+    c(p_EA, p_CA, alpha, beta),
+    "p_EA, p_CA, alpha, beta have to lie in interval (0,1)."
+  )
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
+  
+  if (
+    any(
+      sapply(
+        list(p_EA, p_CA, alpha, beta, r, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (r <= 0) {
+    stop("r has to be greater than 0.")
+  }
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
+  }
+  
+  if (p_CA >= p_EA & alternative == "greater") {
     stop("p_EA has to be greater than p_CA.")
+  }
+  
+  if (alternative == "less") {
+    if (p_EA >= p_CA) {
+      stop("p_CA has to be greater than p_EA.")
+    }
+    # Inverse p_EA and p_CA to test the switched hypothesis
+    p_EA <- 1-p_EA
+    p_CA <- 1-p_CA
   }
   
   # Estimate sample size with approximate formula
@@ -390,119 +450,9 @@ samplesize_exact_boschloo <- function(p_EA, p_CA, alpha, beta, r, size_acc = 4){
   )
 }
 
-samplesize_exact_Fisher <- function(p_EA, p_CA, alpha, beta, r){
-  # Calculate exact sample size for Fisher's exact test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E) and exact power.
-  if (p_CA >= p_EA) {
-    stop("p_EA has to be greater than p_CA.")
-  }
-  
-  # Estimate sample size with approximate formula
-  n_appr <- samplesize_normal_appr(
-    p_EA = p_EA,
-    p_CA = p_CA,
-    alpha = alpha,
-    beta = beta,
-    r = r
-  )
-  
-  # Use estimates as starting values
-  n_C <- n_appr[["n_C"]]
-  n_E <- n_appr[["n_E"]]
-  
-  # Initiate data frame
-  expand.grid(
-    x_C = 0:n_C,
-    x_E = 0:n_E
-  ) %>%
-    teststat_boschloo(n_C = n_C, n_E = n_E) ->
-    df
-  
-  # Calculate exact power
-  df %>%
-    dplyr::mutate(reject = cond_p <= alpha) %>%
-    power_boschloo(n_C, n_E, p_CA, p_EA) ->
-    exact_power
-  
-  # Decrease sample size if power is too high
-  if(exact_power > 1-beta){
-    while(exact_power > 1-beta){
-      # Store power and nominal level of last iteration
-      last_power <- exact_power
-
-      # Decrease sample size by minimal amount possible with allocation ratio r
-      if (r >= 1) {
-        n_C <- n_C - 1
-        n_E <- ceiling(r*n_C)
-      } else {
-        n_E <- n_E - 1
-        n_C <- ceiling(1/r*n_E)
-      }
-      
-      # Initiate data frame
-      expand.grid(
-        x_C = 0:n_C,
-        x_E = 0:n_E
-      ) %>%
-        teststat_boschloo(n_C = n_C, n_E = n_E) ->
-        df
-      
-      # Calculate exact power
-      df %>%
-        dplyr::mutate(reject = cond_p <= alpha) %>%
-        power_boschloo(n_C, n_E, p_CA, p_EA) ->
-        exact_power
-    }
-    # Go one step back
-    if (r >= 1) {
-      n_C <- n_C + 1
-      n_E <- ceiling(r*n_C)
-    } else {
-      n_E <- n_E + 1
-      n_C <- ceiling(1/r*n_E)
-    }
-    exact_power <- last_power
-  }
-  
-  # If power is too low: increase sample size until power is achieved
-  while (exact_power < 1-beta) {
-    if (r >= 1) {
-      n_C <- n_C + 1
-      n_E <- ceiling(r*n_C)
-    } else {
-      n_E <- n_E + 1
-      n_C <- ceiling(1/r*n_E)
-    }
-    
-    # Initiate data frame
-    expand.grid(
-      x_C = 0:n_C,
-      x_E = 0:n_E
-    ) %>%
-      teststat_boschloo(n_C = n_C, n_E = n_E) ->
-      df
-    
-    # Calculate exact power
-    df %>%
-      dplyr::mutate(reject = cond_p <= alpha) %>%
-      power_boschloo(n_C, n_E, p_CA, p_EA) ->
-      exact_power
-  }
-  
-  return(
-    list(
-      n_C = n_C,
-      n_E = n_E,
-      exact_power = exact_power
-    )
-  )
-}
-
 
 # Non-Inferiority ##############################################################
-# Test problem:
+# Default test problem (alternative = "greater"):
 # H_0: OR(p_E, p_A) <= gamma
 # H_1: OR(p_E, p_A) > gamma
 # with 0 < gamma < 1
@@ -642,14 +592,14 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
       max.size
   }
   # Go one step back
-  bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+  bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
   i <- i-1
   
   # If two or more possible results have the same p-values, they have to fall
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
   while(p.values[i-1] == p.values[i]){
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
   }
   
@@ -673,10 +623,10 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
     # Shrink rejection region if size is too high
     while (max.size > alpha) {
       # Reduce rejection region
-      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+      bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
       i <- i-1
       while(p.values[i-1] == p.values[i]){
-        bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+        bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
         i <- i-1
       }
       # Compute maximum size
@@ -692,7 +642,7 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
   while(p.values[i-1] == p.values[i]){
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% tail(1) %>% max())
+    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
   }
   
@@ -703,13 +653,24 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   return(c(nom_alpha_mid = nom_alpha_mid, size = max.size))
 }
 
+
+#' Calculate approximate sample size for approximate test
+#' 
+#' alculate approximate sample size for approximate test for specified
+#' level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+#' OR-NI.margin gamma.
+#' 
+#'@return Sample sizes per group (n_C, n_E).
+#' 
+#' @template p_A
+#' @template gamma
+#' @template error_rate
+#' @template r
+#' 
+#' @export
 samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
-  # Calculate approximate sample size for approximate test for specified
-  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI.margin gamma.
-  # Output: Sample sizes per group (n_C, n_E).
   theta_A <- p_EA*(1-p_CA)/(p_CA*(1-p_EA))
-  n_C <- ceiling(1/r*(qnorm(1-alpha) + qnorm(1-beta))^2 * (1/(p_EA*(1-p_EA)) + r/(p_CA*(1-p_CA))) / (log(theta_A) - log(gamma))^2)
+  n_C <- ceiling(1/r*(stats::qnorm(1-alpha) + stats::qnorm(1-beta))^2 * (1/(p_EA*(1-p_EA)) + r/(p_CA*(1-p_CA))) / (log(theta_A) - log(gamma))^2)
   n_E <- r*n_C %>% ceiling()
   
   return(
@@ -717,16 +678,70 @@ samplesize_Wang <- function(p_EA, p_CA, gamma, alpha, beta, r){
   )
 }
 
-samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3){
-  # Calculate exact sample size for Fisher-Boschloo test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI-margin gamma.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+
+#' Calculate exact sample size for Fisher-Boschloo test
+#' 
+#' Calculate exact sample size for Fisher-Boschloo test and specified
+#' level alpha, power, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
+#' OR-NI-margin gamma.
+#' 
+#' @details Accuracy of calculating the critical value can be specified by size_acc.
+#' 
+#' @template p_A
+#' @template gamma
+#' @template error_rate
+#' @template r
+#' @template size_acc
+#' @template alternative
+#' 
+#'@return Sample sizes per group (n_C, n_E), nominal alpha and exact power.
+#' 
+#' @export 
+samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3, alternative = "greater"){
+  # Check if input is correctly specified
+  check.0.1(
+    c(p_EA, p_CA, alpha, beta),
+    "p_EA, p_CA, alpha, beta have to lie in interval (0,1)."
+  )
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
   
-  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma) {
+  if (
+    any(
+      sapply(
+        list(p_EA, p_CA, gamma, alpha, beta, r, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (any(c(r, gamma) <= 0)) {
+    stop("r and gamma have to be positive.")
+  }
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
+  }
+
+  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma & alternative == "greater") {
     stop("OR(p_EA, p_CA) has to be greater than gamma.")
   }
+  
+  if (alternative == "less") {
+    if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) >= gamma) {
+      stop("OR(p_EA, p_CA) has to be smaller than gamma.")
+    }
+    # Inverse p_EA, p_CA and gamma to test the switched hypothesis
+    p_EA <- 1-p_EA
+    p_CA <- 1-p_CA
+    gamma <- 1/gamma
+  }
+
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_Wang(
@@ -842,119 +857,46 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
   )
 }
 
-samplesize_exact_Fisher_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size_acc = 3){
-  # Calculate exact sample size for Fisher's exact test and specified
-  # level alpha, power, allocation ratio r = n_E/n_C and true rates p_CA, p_EA.
-  # Accuracy of calculating the critical value can be specified by size_acc.
-  # Output: Sample sizes per group (n_C, n_E) and exact power.
-  if (p_EA*(1-p_CA)/(p_CA*(1-p_EA)) <= gamma) {
-    stop("OR(p_EA, p_CA) has to be greater than gamma.")
-  }
-  
-  # Estimate sample size with approximate formula
-  n_appr <- samplesize_Wang(
-    p_EA = p_EA,
-    p_CA = p_CA,
-    gamma = gamma,
-    alpha = alpha,
-    beta = beta,
-    r = r
-  )
-  
-  # Use estimates as starting values
-  n_C <- n_appr[["n_C"]]
-  n_E <- n_appr[["n_E"]]
-  
-  # Initiate data frame
-  expand.grid(
-    x_C = 0:n_C,
-    x_E = 0:n_E
-  ) %>%
-    teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
-    df
-  
-  # Calculate exact power
-  df %>%
-    dplyr::mutate(reject = cond_p <= alpha) %>%
-    power_boschloo(n_C, n_E, p_CA, p_EA) ->
-    exact_power
-  
-  # Decrease sample size if power is too high
-  if(exact_power > 1-beta){
-    while(exact_power > 1-beta){
-      # Store power and nominal level of last iteration
-      last_power <- exact_power
-      
-      # Decrease sample size by minimal amount possible with allocation ratio r
-      if (r >= 1) {
-        n_C <- n_C - 1
-        n_E <- ceiling(r*n_C)
-      } else {
-        n_E <- n_E - 1
-        n_C <- ceiling(1/r*n_E)
-      }
-      
-      # Initiate data frame
-      expand.grid(
-        x_C = 0:n_C,
-        x_E = 0:n_E
-      ) %>%
-        teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
-        df
-      
-      # Calculate exact power
-      df %>%
-        dplyr::mutate(reject = cond_p <= alpha) %>%
-        power_boschloo(n_C, n_E, p_CA, p_EA) ->
-        exact_power
-    }
-    # Go one step back
-    if (r >= 1) {
-      n_C <- n_C + 1
-      n_E <- ceiling(r*n_C)
-    } else {
-      n_E <- n_E + 1
-      n_C <- ceiling(1/r*n_E)
-    }
-    exact_power <- last_power
-  }
-  
-  # If power is too low: increase sample size until power is achieved
-  while (exact_power < 1-beta) {
-    if (r >= 1) {
-      n_C <- n_C + 1
-      n_E <- ceiling(r*n_C)
-    } else {
-      n_E <- n_E + 1
-      n_C <- ceiling(1/r*n_E)
-    }
-    
-    # Initiate data frame
-    expand.grid(
-      x_C = 0:n_C,
-      x_E = 0:n_E
-    ) %>%
-      teststat_boschloo_NI(n_C = n_C, n_E = n_E, gamma = gamma) ->
-      df
-    
-    # Calculate exact power
-    df %>%
-      dplyr::mutate(reject = cond_p <= alpha) %>%
-      power_boschloo(n_C, n_E, p_CA, p_EA) ->
-      exact_power
-  }
-  
-  return(
-    list(
-      n_C = n_C,
-      n_E = n_E,
-      exact_power = exact_power
-    )
-  )
-}
-
-p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3){
+p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3, alternative = "greater"){
   # Calculate p-values for a specific result (x_E., x_C.)
+  
+  # Check if input is correctly specified
+  check.pos.int(
+    size_acc,
+    "size_acc has to be positive integer."
+  )
+  check.pos.int(
+    c(x_E.+1, x_C.+1, n_E, n_C, n_E-x_E.+1, n_C-x_C.+1),
+    "n_E, n_C have to be positive integers and x_E. in {0, ..., n_E}, x_C. in {0, ..., n_C}."
+  )
+  
+  if (
+    any(
+      sapply(
+        list(x_E., x_C., n_E, n_C, gamma, size_acc, alternative),
+        length
+      ) != 1
+    )
+  ) {
+    stop("Input values have to be single values.")
+  }
+  
+  if (gamma <= 0) {
+    stop("gamma has to be positive.")
+  }
+  
+  if (!(alternative %in% c("less", "greater"))) {
+    warning("alternative has to be \"less\" or \"greater\". Will be treated as \"greater\".")
+    alternative <- "greater"
+  }
+  
+  if (alternative == "less") {
+    # Inverse values for other-sided hypothesis
+    x_E. <- n_E - x_E.
+    x_C. <- n_C - x_C.
+    gamma <- 1/gamma
+  }
+  
   # Define grid for p_C
   p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
   
