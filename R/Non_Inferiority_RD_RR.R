@@ -425,11 +425,8 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
 }
 
 # function to compute p-values for a specific result
-<<<<<<< HEAD
 p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3, better){
-=======
-p_value <- function(x_E., x_C., n_E, n_C, method, delta, better, size_acc = 3){
->>>>>>> 1d1fa0a699950b2e1e43d8911a896c323e527149
+
   # Define grid for p_C
   p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
   
