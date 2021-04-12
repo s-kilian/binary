@@ -812,7 +812,7 @@ samplesize_exact_boschloo_NI <- function(p_EA, p_CA, gamma, alpha, beta, r, size
   )
 }
 
-p_value <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3, alternative = "greater"){
+p_value_boschloo <- function(x_E., x_C., n_E, n_C, gamma, size_acc = 3, alternative = "greater"){
   # Calculate p-values for a specific result (x_E., x_C.)
   
   # Check if input is correctly specified
