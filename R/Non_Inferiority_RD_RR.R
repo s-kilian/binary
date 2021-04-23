@@ -211,48 +211,6 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   )
 }
 
-
-power <- function(df, n_C, n_E, p_CA, p_EA, better){
-  # Take data frame df with variable x_C and x_E representing all possible
-  # response pairs for group sizes n_C and n_E and variable reject indicating
-  # whether coordinates belong to rejection region.
-  # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
-  
-  if (
-    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
-  ) {
-    stop("Values of x_C and x_E have to fit n_C and n_E.")
-  }
-  
-  if (
-    length(p_CA) != length(p_EA) |
-    !all(p_CA >= 0 & p_CA <= 1 & p_EA >= 0 & p_EA <= 1)
-  ) {
-    stop("p_CA and p_EA must have same length and values in [0, 1].")
-  }
-  
-  
-  # compute uncond. size for every p
-  sapply(
-    1:length(p_CA),
-    function(i) {
-      df %>%
-        dplyr::filter(reject) %>%
-        dplyr::mutate(prob = stats::dbinom(x_C, n_C, p_CA[i])*stats::dbinom(x_E, n_E, p_EA[i])) %>%
-        dplyr::pull(prob) %>%
-        sum()
-    }
-  ) ->
-    result
-  names(result) <- paste(p_CA, p_EA, sep = ", ")
-  return(result)
-}
-
-
-
-
-
 # Function to compute exact sample size
 samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
   # Calculate exact sample size for method "X and specified
