@@ -110,6 +110,43 @@ p_C.to.p_E <- function(p_C, method, delta){
   return(p_E)
 }
 
+power <- function(df, n_C, n_E, p_CA, p_EA, better){
+  # Take data frame df with variable x_C and x_E representing all possible
+  # response pairs for group sizes n_C and n_E and variable reject indicating
+  # whether coordinates belong to rejection region.
+  # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
+  
+  if (
+    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
+    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
+  ) {
+    stop("Values of x_C and x_E have to fit n_C and n_E.")
+  }
+  
+  if (
+    length(p_CA) != length(p_EA) |
+    !all(p_CA >= 0 & p_CA <= 1 & p_EA >= 0 & p_EA <= 1)
+  ) {
+    stop("p_CA and p_EA must have same length and values in [0, 1].")
+  }
+  
+  
+  # compute uncond. size for every p
+  df %>%
+    dplyr::filter(!reject) ->
+    df.accept
+  
+  sapply(
+    1:length(p_CA),
+    function(i) {
+      1-sum(stats::dbinom(df.accept$x_C, n_C, p_CA[i])*stats::dbinom(df.accept$x_E, n_E, p_EA[i]))
+    }
+  ) ->
+    result
+  names(result) <- paste(p_CA, p_EA, sep = ", ")
+  return(result)
+}
+
 #' Calculate p-value(s)
 #' 
 #' \code{p_value} returns the vector of p-values (dependent on the true $H_0$ proportions)
