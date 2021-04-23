@@ -17,7 +17,7 @@
 #' for non-inferiority of the risk difference between two proportions.
 #' 
 #' If higher values of $x_E$ favour the alternative hypothesis, we are interested
-#' in testing the nul hypothesis
+#' in testing the null hypothesis
 #' $$H_0: p_E - p_C \le -\delta ,$$
 #' where the NI-margin is usually positive: $\delta > 0$.
 #' The test statistic for this hypothesis is
@@ -32,7 +32,7 @@
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
 #' @param better "high" if higher values of x_E favour the alternative 
-#' hypothesis and "low vice versa.
+#' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' @examples
 #' test_RD(3, 4, 10, 10, 0.2, "high")
@@ -72,7 +72,7 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 #' for non-inferiority of the risk ratio between two proportions.
 #' 
 #' If higher values of $x_E$ favour the alternative hypothesis, we are interested
-#' in testing the nul hypothesis
+#' in testing the null hypothesis
 #' $$H_0: p_E / p_C \le \delta ,$$
 #' where the NI-margin is usually smaller than 1: $\delta < 1$.
 #' The test statistic for this hypothesis is
@@ -87,7 +87,7 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
 #' @param better "high" if higher values of x_E favour the alternative 
-#' hypothesis and "low vice versa.
+#' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' @examples
 #' test_RD(3, 4, 10, 10, 0.2, "high")
@@ -112,47 +112,6 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
     return <- ifelse(p_E - delta * p_C == 0, 0, (p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
   }
     return(return)
-}
-
-
-
-# function to compute test statistic for every response pair
-teststat <- function(df, n_E, n_C, delta, method, better){
-  # df is a data frame with all possible response pairs (x_E, x_C), i.e.
-  # df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
-  # n_E, n_C are the sample sizes in the groups
-  # delta is the NI-margin.
-  # method defines the specific test (statistic), i.e. "Risk ratio".
-  # small values of stat favor the alternative.
-  if (method == "RR") {
-    return = df %>%
-      dplyr::mutate(
-        stat = test_RR(x_E, x_C, n_E, n_C, delta, better)
-      ) 
-  }
-   
-  if (method == "RD") {
-    return = df %>%
-      dplyr::mutate(
-        stat = test_RD(x_E, x_C, n_E, n_C, delta, better)
-      )
-  }
-  
-  return(return)
-}
-
-
-# function to compute p_E from p_C and NI-margin delta s.t. effect(p_E, p_C) = delta
-p_C.to.p_E <- function(p_C, method, delta){
-  
-  if (method == "RR") {
-    p_E <- p_C * delta
-  }
-  if (method == "RD") {
-    p_E <- p_C - delta
-  }
-  
-  return(p_E)
 }
 
 
@@ -423,37 +382,6 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     )
   )
 }
-
-# function to compute p-values for a specific result
-p_value <- function(x_E., x_C., n_E, n_C, method, delta, size_acc = 3, better){
-
-  # Define grid for p_C
-  p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
-  
-  # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
-  # the null hypothesis
-  p_E <- p_C.to.p_E(p_C, method, delta)
-  
-  p_C <- p_C[p_E >= 0 & p_E <= 1]
-  p_E <- p_E[p_E >= 0 & p_E <= 1]
-  
-  df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
-  
-  expand.grid(
-    x_C = 0:n_C,
-    x_E = 0:n_E
-  ) %>%
-    teststat(n_E, n_C, delta, method, better) %>%
-    dplyr::mutate(
-      reject = stat <= stat[x_E == x_E. & x_C == x_C.]
-    ) %>%
-    power(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
-    p.values
-  
-  # return vector of p-values. The "one" p-value would be max(p.values).
-  return(p.values)
-}
-
 
 
 samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
