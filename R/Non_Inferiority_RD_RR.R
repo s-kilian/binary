@@ -215,16 +215,18 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
 samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
   # Calculate exact sample size for method "X and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
-  # OR-NI-margin delta
+  # NI-margin delta
   # Accuracy of calculating the critical value can be specified by size_acc.
   # Output: Sample sizes per group (n_C, n_E), critical value and exact power.
   
   # Check wheter p_EA, p_CA lie in the alternative hypothesis
-  #if (
-  #  p_C.to.p_E(p_CA, method, delta) >= p_EA
-  #) {
-  #  stop("p_EA, p_CA has to belong to alternative hypothesis.")
-  #}
+  check.effect.delta.better(
+    p_E = p_EA,
+    p_C = p_CA,
+    method = method,
+    delta = delta,
+    better = better
+  )
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(
@@ -234,7 +236,8 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     alpha = alpha,
     beta = beta,
     r = r,
-    method = method
+    method = method,
+    better = better
   )
   
   # Use estimates as starting values
@@ -342,9 +345,22 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
 }
 
 
-samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
+samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
+  check.effect.delta.better(
+    p_E = p_EA,
+    p_C = p_CA,
+    method = method,
+    delta = delta,
+    better = better
+  )
   
   if(method == "RD"){
+    # if low values of p_EA favor the alternative, flip probabilites and delta
+    if(better == "low"){
+      p_EA <- 1-p_EA
+      p_CA <- 1-p_CA
+      delta <- -delta
+    }
     theta <- 1/r
     
     a <- 1 + theta
@@ -376,7 +392,14 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
   
   
   if(method == "RR"){
-    
+    # if low values of p_EA favor the alternative, swap groups and flip delta and r
+    if(better == "low"){
+      p_CA. <- p_EA
+      p_EA <- p_CA
+      p_CA <- p_CA.
+      delta <- 1/delta
+      r <- 1/r
+    }
     theta <- 1/r
     
     a <- 1 + theta
@@ -397,6 +420,11 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     
     n_C <- ceiling(1/(1+r) * n)
     n_E <- ceiling(r/(1+r) * n)
+    if(better == "low"){
+      n_E. <- n_C
+      n_C <- n_E
+      n_E <- n_E.
+    }
     n_total<- n_E + n_C
     
   }
