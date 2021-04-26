@@ -37,7 +37,7 @@
 #' The density is zero if $k < \max(0, s-n_C)$ or $k > \min(n_E, s)$.
 #' Small values of $T_{\OR, \delta}$ favour the alternative hypothesis.
 #' 
-#'  
+#' @param df data frame with variables x_E and x_C
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
@@ -70,14 +70,14 @@ teststat <- function(df, n_E, n_C, delta, method, better){
   if (method == "RR") {
     return <- df %>%
       dplyr::mutate(
-        stat = -test_RR(x_E, x_C, n_E, n_C, delta, better)
+        stat = test_RR(x_E, x_C, n_E, n_C, delta, better)
       ) 
   }
   
   if (method == "RD") {
     return = df %>%
       dplyr::mutate(
-        stat = -test_RD(x_E, x_C, n_E, n_C, -delta, better)
+        stat = test_RD(x_E, x_C, n_E, n_C, delta, better)
       )
   }
   
@@ -272,4 +272,33 @@ p_value <- function(
       p_vec = p.values
     )
   )
+}
+
+conf_int <- function(
+  x_E.,
+  x_C.,
+  n_E,
+  n_C,
+  alpha = 0.05,
+  method,
+  delta = NULL,
+  size_acc = 3,
+  better = c("high", "low")
+){
+  # # for testing
+  # x_E. = 10
+  # x_C. = 20
+  # n_E <- 100
+  # n_C <- 100
+  # alpha <- 0.05
+  # method <- "RD"
+  # delta <- 
+  # work in progress
+}
+
+effect <- function(p_E, p_C, method){
+  if(method == "RD") effect <- p_E-p_C
+  if(method == "RR") effect <- p_E/p_C
+  if(method == "OR") effect <- (p_E/(1-p_E))/(p_C/(1-p_C))
+  return(effect)
 }
