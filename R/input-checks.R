@@ -69,3 +69,17 @@ check.delta.null <- function(
   }
   return(delta)
 }
+
+check.effect.delta.better <- function(
+  p_E,
+  p_C,
+  method,
+  delta,
+  better
+){
+  # check if specified prob. lie in region of alternative hyp.
+  effect <- effect(p_E = p_E, p_C = p_C, method = method)
+  if(better == "high") fits.alt <- effect > delta
+  if(better == "low") fits.alt <- effect < delta
+  if(!fits.alt) stop(paste0("delta = ", delta, " is ", better, "er than assumed effect ", method, " = ", effect))
+}
