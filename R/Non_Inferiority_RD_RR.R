@@ -76,10 +76,10 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 #' $$H_0: p_E / p_C \le \delta ,$$
 #' where the NI-margin is usually smaller than 1: $\delta < 1$.
 #' The test statistic for this hypothesis is
-#' $$T_{\RD, \delta}(x_E, x_C) = -\frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
+#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
 #' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
 #' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
-#' Small values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
@@ -106,10 +106,10 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   p_C0 <- p_E0 / delta
   
   if (better == "high"){
-    return <- ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+    return <- ifelse(p_E - delta * p_C == 0, 0, (p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
   }
   if (better == "low"){
-    return <- ifelse(p_E - delta * p_C == 0, 0, (p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+    return <- ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
   }
     return(return)
 }
