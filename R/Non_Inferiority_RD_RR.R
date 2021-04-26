@@ -126,7 +126,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     x_E = 0:n_E
   ) %>%
     teststat(n_E, n_C, delta, method, better) %>%
-    dplyr::arrange(stat) ->
+    dplyr::arrange(desc(stat)) ->
     df.stat
   
   # Extract stat, x_C and x_E as vector
@@ -136,13 +136,13 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   
   # Find starting value for the search of critical value. E.g. take the
   # quantile of the approximate distribution of stat
-  start_value <- -stats::qnorm(1-alpha) 
+  start_value <- stats::qnorm(1-alpha) 
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
   # Special case with very small sample sizes can lead to stat > start_value 
   # for all rows. Then set i <- 1
-  i <- sum(stat<start_value)
+  i <- max(sum(stat<start_value), 1)
   
   # Define rough grid for p_C
   acc <- 1
@@ -254,7 +254,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
   
   # Calculate exact power
   df %>%
-    dplyr::mutate(reject = stat <= crit.val) %>%
+    dplyr::mutate(reject = stat >= crit.val) %>%
     power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
     exact_power
   
@@ -287,7 +287,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       
       # Calculate exact power
       df %>%
-        dplyr::mutate(reject = stat <= crit.val) %>%
+        dplyr::mutate(reject = stat >= crit.val) %>%
         power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
         exact_power
     }
@@ -326,7 +326,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     
     # Calculate exact power
     df %>%
-      dplyr::mutate(reject = stat <= crit.val) %>%
+      dplyr::mutate(reject = stat >= crit.val) %>%
       power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
       exact_power
   }
@@ -348,9 +348,9 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     theta <- 1/r
     
     a <- 1 + theta
-    b <- -(1 + theta + p_EA + theta * p_CA - delta * (theta + 2))
-    c <- delta^2 - delta * (2*p_EA + theta + 1) + p_EA + theta * p_CA
-    d <- p_EA * delta * (1 - delta)
+    b <- -(1 + theta + p_EA + theta * p_CA + delta * (theta + 2))
+    c <- delta^2 + delta * (2*p_EA + theta + 1) + p_EA + theta * p_CA
+    d <- -p_EA * delta * (1 + delta)
     
     # Define the parameters for solving the equation
     v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
@@ -359,7 +359,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     
     # Define the solution
     p_E0 <- 2*u*cos(w) - b/(3*a)
-    p_C0 <- p_E0 + delta
+    p_C0 <- p_E0 - delta
     
     z_alpha <- stats::qnorm(1 - alpha, mean = 0, sd = 1)
     z_beta <- stats::qnorm(1 - beta, mean = 0, sd = 1)
@@ -367,7 +367,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method){
     # Calculating the sample size
     n <- (1+r) / r * (z_alpha * sqrt(r * p_C0 * (1 - p_C0) + p_E0 * (1-p_E0))
                       + z_beta * sqrt(r * p_CA * (1 - p_CA) + p_EA * (1-p_EA)))^2 / 
-      (p_EA - p_CA + delta)^2
+      (p_EA - p_CA - delta)^2
     
     n_C <- ceiling(1/(1+r) * n)
     n_E <- ceiling(r/(1+r) * n)
