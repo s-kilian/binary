@@ -18,13 +18,13 @@
 #' 
 #' If higher values of $x_E$ favour the alternative hypothesis, we are interested
 #' in testing the null hypothesis
-#' $$H_0: p_E - p_C \le -\delta ,$$
-#' where the NI-margin is usually positive: $\delta > 0$.
+#' $$H_0: p_E - p_C \le \delta ,$$
+#' where the NI-margin is usually non-positive: $\delta \le 0$.
 #' The test statistic for this hypothesis is
-#' $$T_{\RD, \delta}(x_E, x_C) = -\frac{\hat p_E - \hat p_C + \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
+#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
 #' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
 #' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E - p_C = \delta$.
-#' Small values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
@@ -44,22 +44,22 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
   p1hat <- x_E / n_E
   p2hat <- x_C / n_C
   a <- 1 + theta
-  b <- -(1 + theta + p1hat + theta * p2hat + (-delta) * (theta + 2))
-  c <- (-delta)^2 + (-delta) * (2*p1hat + theta + 1) + p1hat + theta * p2hat
-  d <- - p1hat * (-delta) * (1 + (-delta))
+  b <- -(1 + theta + p1hat + theta * p2hat + delta * (theta + 2))
+  c <- delta^2 + delta * (2*p1hat + theta + 1) + p1hat + theta * p2hat
+  d <- - p1hat * delta * (1 + delta)
   # Define the parameters for solving the equation
   v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
   u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
   w <- 1/3 * (pi + acos(ifelse(u == 0, 0, round(v/u^3, 10))))   # das round wurde eingebaut, weil wenn bei v/u^3 etwas minimal gr??er als 1 rauskommt es zu einer Fehlermeldung kommt! 
   # Define the solution
   p_E0 <- 2*u*cos(w) - b/(3*a)
-  p_C0 <- p_E0 + delta
+  p_C0 <- p_E0 - delta
   
   if (better == "high"){
-   return <-  ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+   return <-  ifelse(p_E - p_C + delta == 0, 0, (p_E - p_C - delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
   }
   if (better == "low"){
-    return <- ifelse(p_E - p_C + delta == 0, 0, (p_E - p_C + delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+    return <- ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C - delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
   }
   return(return)
   
