@@ -6,17 +6,17 @@ test_that("Functions work", {
     better = c("high", "low", "high", "low", "high"),
     n_E = rep(15, 5),
     n_C = rep(23, 5),
-    delta = c(-0.1, 0.8, 0.9, 2, 1/4),
+    delta = c(-0.1, 0.8, 0.9, 4, 1/6),
     alpha = rep(0.025, 5),
     power = rep(0.8, 5),
     size_acc = rep(3, 5),
     p_EA = c(rep(0.5, 4), 0.3),
     p_CA = c(rep(0.3, 4), 0.5),
-    r = c(rep(2, 4), 1)
+    r = c(rep(2, 4), 1/2)
   ) ->
     df
   
-  for(i in 1:nrow(df)){
+  for(i in 1:3){
     teststat(
       df = expand.grid(
         x_E = 0:df$n_E[i],

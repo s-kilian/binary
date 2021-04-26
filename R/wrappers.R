@@ -302,3 +302,4 @@ effect <- function(p_E, p_C, method){
   if(method == "OR") effect <- (p_E/(1-p_E))/(p_C/(1-p_C))
   return(effect)
 }
+
