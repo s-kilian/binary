@@ -83,3 +83,4 @@ check.effect.delta.better <- function(
   if(better == "low") fits.alt <- effect < delta
   if(!fits.alt) stop(paste0("delta = ", delta, " is ", better, "er than assumed effect ", method, " = ", effect))
 }
+
