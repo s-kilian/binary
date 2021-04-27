@@ -110,7 +110,114 @@ p_C.to.p_E <- function(p_C, method, delta){
   return(p_E)
 }
 
-power <- function(df, n_C, n_E, p_CA, p_EA, better){
+# function to compute d p_E/d p_C from p_C and NI-margin delta
+d.p_E.p_C <- function(p_C, method, delta){
+  
+  if (method == "RR") {
+    d.p_E.p_C <- rep(delta, length(p_C))
+  }
+  if (method == "RD") {
+    d.p_E.p_C <- rep(1, length(p_C))
+  }
+  if (method == "OR") {
+    d.p_E.p_C <- delta/(delta*p_C + 1 - p_C)^2
+  }
+  
+  return(d.p_E.p_C)
+}
+
+# Calculate derivative after p_E of probability of a specific region under H0
+prob.derivative <- function(
+  p_C.vec,      # vector of true values of p_C
+  x_E,          # vector of values belonging to region
+  x_C,          # vector of values belonging to region
+  n_E,
+  n_C,
+  method,
+  delta
+){
+  if(!(length(x_E) == length(x_C))){
+    stop("x_E and x_C must have same length.")
+  }
+  
+  p_E.vec <- p_C.to.p_E(p_C = p_C.vec, method = method, delta = delta)
+  d.p_E.p_C <- d.p_E.p_C(p_C = p_C.vec, method = method, delta = delta)
+  
+  result <- c()
+  for (i in 1:length(p_C.vec)) {
+    result <- c(result,
+                sum(
+                  dbinom(x_E, n_E, p_E.vec[i])*dbinom(x_C, n_C, p_C.vec[i])*
+                    (x_E/p_E.vec[i]*d.p_E.p_C[i] - (n_E-x_E)/(1-p_E.vec[i])*d.p_E.p_C[i] + x_C/p_C.vec[i] - (n_C-x_C)/(1-p_C.vec[i]))
+                )
+    )
+  }
+  return(result)
+}
+
+find_max_prob_uniroot <- function(
+  df,             # data frame with variables x_E, x_C and reject
+  n_E,
+  n_C,
+  method,
+  delta
+){
+  # # for testing
+  # method = "RR"
+  # n_E <- 100
+  # n_C <- 100
+  # delta <- 1.1
+  # alpha <- 0.05
+  # expand.grid(
+  #   x_E = 0:n_E,
+  #   x_C = 0:n_C
+  # ) %>%
+  #   teststat(
+  #     n_E = n_E,
+  #     n_C = n_C,
+  #     delta = delta,
+  #     method = method,
+  #     better = "high"
+  #   ) %>%
+  #   mutate( reject = stat >= qnorm(1-alpha)) ->
+  #   df
+  df %>%
+    filter(reject) ->
+    df.
+  
+  if(method == "RD") interval.p_C <- c(max(0, -delta), min(1, 1-delta))
+  if(method == "RR") interval.p_C <- c(0, min(1, 1/delta))
+  if(method == "OR") interval.p_C <- c(0, 1)
+  
+  rootSolve::uniroot.all(
+    f = prob.derivative,
+    interval = interval.p_C,
+    n = 100,
+    maxiter = 10^4,
+    x_E = df.$x_E,
+    x_C = df.$x_C,
+    n_E = n_E,
+    n_C = n_C,
+    method = method,
+    delta = delta
+  ) ->
+    roots
+  
+  p_CA <- c(interval.p_C, roots)
+  p_EA <- p_C.to.p_E(p_C = p_CA, method = method, delta = delta)
+  
+  return(
+    power(
+      df = df,
+      n_C = n_C,
+      n_E = n_C,
+      p_CA = p_CA,
+      p_EA = p_EA
+    )
+  )
+}
+
+power <- function(df, n_C, n_E, p_CA, p_EA){
   # Take data frame df with variable x_C and x_E representing all possible
   # response pairs for group sizes n_C and n_E and variable reject indicating
   # whether coordinates belong to rejection region.
@@ -133,17 +240,57 @@ power <- function(df, n_C, n_E, p_CA, p_EA, better){
   
   # compute uncond. size for every p
   df %>%
-    dplyr::filter(!reject) ->
-    df.accept
+    dplyr::filter(reject) ->
+    df.reject
   
   sapply(
     1:length(p_CA),
     function(i) {
-      1-sum(stats::dbinom(df.accept$x_C, n_C, p_CA[i])*stats::dbinom(df.accept$x_E, n_E, p_EA[i]))
+      sum(stats::dbinom(df.reject$x_C, n_C, p_CA[i])*stats::dbinom(df.reject$x_E, n_E, p_EA[i]))
     }
   ) ->
     result
   names(result) <- paste(p_CA, p_EA, sep = ", ")
+  return(result)
+}
+
+find_max_prob <- function(
+  df,             # data frame with variables x_E, x_C and reject
+  n_E,
+  n_C,
+  method,
+  delta,
+  calc_method = c("uniroot", "grid search"),     # method to find maximum
+  size_acc = 3
+){
+  if(calc_method == "uniroot"){
+    result <- max(find_max_prob_uniroot(
+      df = df,
+      n_E = n_E,
+      n_C = n_C,
+      method = method,
+      delta = delta
+    ))
+  }
+  if(calc_method == "grid search"){
+    # Define grid for p_C
+    p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
+    
+    # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
+    # the null hypothesis
+    p_E <- p_C.to.p_E(p_C, method, delta)
+    
+    p_C <- p_C[p_E >= 0 & p_E <= 1]
+    p_E <- p_E[p_E >= 0 & p_E <= 1]
+    
+    result <- max(power(
+      df = df,
+      n_E = n_E,
+      n_C = n_C,
+      p_EA = p_E,
+      p_CA = p_C
+    ))
+  }
   return(result)
 }
 
@@ -260,7 +407,7 @@ p_value <- function(
   df %>%
     teststat(n_E, n_C, delta, method, better) %>%
     dplyr::mutate(
-      reject = stat <= stat[x_E == x_E. & x_C == x_C.]
+      reject = stat >= stat[x_E == x_E. & x_C == x_C.]
     ) %>%
     power(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
     p.values
