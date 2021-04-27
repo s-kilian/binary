@@ -291,7 +291,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       # Calculate exact power
       df %>%
         dplyr::mutate(reject = stat >= crit.val) %>%
-        power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
+        power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
         exact_power
     }
     # Go one step back
@@ -330,7 +330,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     # Calculate exact power
     df %>%
       dplyr::mutate(reject = stat >= crit.val) %>%
-      power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA, better = better) ->
+      power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
       exact_power
   }
   
