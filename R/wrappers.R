@@ -30,12 +30,12 @@
 #' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
 #' High values of $T_{\RR, \delta}$ favour the alternative hypothesis.
 #' The test statistic for Odds Ratio
-#' $$ T_{\OR, \delta} = \sum\limits_{k = X_E}^\infty  f_{\ncHg(X_E+X_C, n_E, n_C, \delta)}(k) $$
+#' $$ T_{\OR, \delta} = 1-(1 - F_{\ncHg(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) $$
 #' is based on Fisher's non-central hypergeometric distribution with density
 #' $$ f_{\ncHg(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, $$
 #' where $A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}$.
 #' The density is zero if $k < \max(0, s-n_C)$ or $k > \min(n_E, s)$.
-#' Small values of $T_{\OR, \delta}$ favour the alternative hypothesis.
+#' High values of $T_{\OR, \delta}$ favour the alternative hypothesis (due to "1-...").
 #' 
 #' @param df data frame with variables x_E and x_C
 #' @param n_E Sample size in experimental group.
@@ -86,7 +86,7 @@ teststat <- function(df, n_E, n_C, delta, method, better){
       dplyr::mutate(s = x_C+x_E) %>%
       dplyr::group_by(s) %>%
       dplyr::mutate(
-        stat = BiasedUrn::pFNCHypergeo(x_C, n_C, n_E, s[1], 1/delta)
+        stat = BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
       ) %>%
       ungroup()
   }
