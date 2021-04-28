@@ -450,3 +450,118 @@ effect <- function(p_E, p_C, method){
   return(effect)
 }
 
+samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
+  check.effect.delta.better(
+    p_E = p_EA,
+    p_C = p_CA,
+    method = method,
+    delta = delta,
+    better = better
+  )
+  
+  if(method == "RD"){
+    # if low values of p_EA favor the alternative, flip probabilites and delta
+    if(better == "low"){
+      p_EA <- 1-p_EA
+      p_CA <- 1-p_CA
+      delta <- -delta
+    }
+    theta <- 1/r
+    
+    a <- 1 + theta
+    b <- -(1 + theta + p_EA + theta * p_CA + delta * (theta + 2))
+    c <- delta^2 + delta * (2*p_EA + theta + 1) + p_EA + theta * p_CA
+    d <- -p_EA * delta * (1 + delta)
+    
+    # Define the parameters for solving the equation
+    v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
+    u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
+    w <- 1/3 * (pi + acos(v/u^3))
+    
+    # Define the solution
+    p_E0 <- 2*u*cos(w) - b/(3*a)
+    p_C0 <- p_E0 - delta
+    
+    z_alpha <- stats::qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- stats::qnorm(1 - beta, mean = 0, sd = 1)
+    
+    # Calculating the sample size
+    n <- (1+r) / r * (z_alpha * sqrt(r * p_C0 * (1 - p_C0) + p_E0 * (1-p_E0))
+                      + z_beta * sqrt(r * p_CA * (1 - p_CA) + p_EA * (1-p_EA)))^2 / 
+      (p_EA - p_CA - delta)^2
+    
+    n_C <- ceiling(1/(1+r) * n)
+    n_E <- ceiling(r/(1+r) * n)
+    n_total <- n_E + n_C
+  }
+  
+  
+  if(method == "RR"){
+    # if low values of p_EA favor the alternative, swap groups and flip delta and r
+    if(better == "low"){
+      p_CA. <- p_EA
+      p_EA <- p_CA
+      p_CA <- p_CA.
+      delta <- 1/delta
+      r <- 1/r
+    }
+    theta <- 1/r
+    
+    a <- 1 + theta
+    b <- -(delta*(1 + theta*p_CA) + theta + p_EA)
+    c <- delta * (p_EA + theta * p_CA)
+    
+    # Define the solution
+    p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
+    p_C0 <- p_E0 / delta
+    
+    z_alpha <- stats::qnorm(1 - alpha, mean = 0, sd = 1)
+    z_beta <- stats::qnorm(1 - beta, mean = 0, sd = 1)
+    
+    # Calculating the sample size
+    n <- (1+r) / r * (z_alpha * sqrt(r * delta^2 * p_C0 * (1 - p_C0) + p_E0 * (1 - p_E0))
+                      + z_beta * sqrt(r * delta^2 * p_CA * (1 - p_CA) + p_EA * (1 - p_EA)))^2 / 
+      (p_EA - delta * p_CA)^2
+    
+    n_C <- ceiling(1/(1+r) * n)
+    n_E <- ceiling(r/(1+r) * n)
+    if(better == "low"){
+      n_E. <- n_C
+      n_C <- n_E
+      n_E <- n_E.
+    }
+    n_total<- n_E + n_C
+    
+  }
+  
+  if(method == "OR"){
+    if(better == "low"){
+      p_CA. <- p_EA
+      p_EA <- p_CA
+      p_CA <- p_CA.
+      delta <- 1/delta
+      r <- 1/r
+    }
+    samplesize_Wang(
+      p_EA = p_EA,
+      p_CA = p_CA,
+      gamma = delta,
+      alpha = alpha,
+      beta = beta,
+      r = r
+    ) ->
+      res
+    
+    n_C <- res$n_C
+    n_E <- res$n_E
+    
+    if(better == "low"){
+      n_E. <- n_C
+      n_C <- n_E
+      n_E <- n_E.
+    }
+    n_total<- n_E + n_C
+  }
+  
+  return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C))
+}
