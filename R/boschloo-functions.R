@@ -577,7 +577,7 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
   # If two or more possible results have the same p-values, they have to fall
   # in the same region. The rejection region is shrinked until this condition
   # is fulfilled.
-  while(p.values[i-1] == p.values[i]){
+  while(p.values[i+1] == p.values[i]){
     bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
     i <- i-1
   }
@@ -604,7 +604,7 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
       # Reduce rejection region
       bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
       i <- i-1
-      while(p.values[i-1] == p.values[i]){
+      while(p.values[i+1] == p.values[i]){
         bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
         i <- i-1
       }
@@ -617,13 +617,20 @@ critval_boschloo_NI <- function(alpha, n_C, n_E, gamma, size_acc = 3){
         max.size
     }
   }
-  # If two or more possible results have the same p-values, they have to fall
-  # in the same region. The rejection region is shrinked until this condition
-  # is fulfilled.
-  while(p.values[i-1] == p.values[i]){
-    bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
-    i <- i-1
-  }
+  # # If two or more possible results have the same p-values, they have to fall
+  # # in the same region. The rejection region is shrinked until this condition
+  # # is fulfilled.
+  # while(p.values[i-1] == p.values[i]){
+  #   bounds[s.vec[i]+1] <- suppressWarnings(p.values[1:(i-1)][s.vec[1:(i-1)] == s.vec[i]] %>% utils::tail(1) %>% max())
+  #   i <- i-1
+  # }
+  # # Recalculate maximal size
+  # sapply(
+  #   1:length(p_CA),
+  #   function(x) sum(bounds[bounds != -Inf]*s.prob.vec.list[[x]][bounds != -Inf])
+  # ) %>%
+  #   max() ->
+  #   max.size
   
   # Define nominal alpha as mean of highest p-value in rejection region and
   # lowest p-value in acceptance region
