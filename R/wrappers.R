@@ -94,6 +94,19 @@ teststat <- function(df, n_E, n_C, delta, method, better){
   return(return)
 }
 
+# function to create grid for p_C
+p_C.grid <- function(
+  method,
+  delta,
+  acc
+){
+  if(method == "RD") grid <- seq(max(0, -delta), min(1, 1-delta), by = 10^-acc)
+  if(method == "RR") grid <- seq(0, min(1, 1/delta), by = 10^-acc)
+  if(method == "OR") grid <- seq(0, 1, by = 10^-acc)
+  
+  return(grid)
+}
+
 # function to compute p_E from p_C and NI-margin delta s.t. effect(p_E, p_C) = delta
 p_C.to.p_E <- function(p_C, method, delta){
   
@@ -274,14 +287,11 @@ find_max_prob <- function(
   }
   if(calc_method == "grid search"){
     # Define grid for p_C
-    p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
+    p_C <- p_C.grid(method = method, delta = delta, acc = size_acc)
     
     # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
     # the null hypothesis
     p_E <- p_C.to.p_E(p_C, method, delta)
-    
-    p_C <- p_C[p_E >= 0 & p_E <= 1]
-    p_E <- p_E[p_E >= 0 & p_E <= 1]
     
     result <- max(power(
       df = df,
@@ -421,26 +431,63 @@ p_value <- function(
   )
 }
 
-conf_int <- function(
+conf_region_appr <- function(
   x_E.,
   x_C.,
   n_E,
   n_C,
   alpha = 0.05,
   method,
-  delta = NULL,
   size_acc = 3,
-  better = c("high", "low")
+  better = c("high", "low"),
+  acc = 3
 ){
-  # # for testing
-  # x_E. = 10
-  # x_C. = 20
-  # n_E <- 100
-  # n_C <- 100
-  # alpha <- 0.05
-  # method <- "RD"
-  # delta <- 
-  # work in progress
+  # preliminary
+  if(method == "RD"){
+    delta_vec <- seq(-1, 1, length.out = 10^acc)
+  }
+  if(method == "RR"){
+    delta_vec <- seq(0, 100, length.out = 10^acc)
+  }
+  if(method == "OR"){
+    delta_vec <- seq(0, 100, length.out = 10^acc)
+  }
+  delta_in_region <- rep(T, length(delta_vec))
+  return(
+    list(
+      delta_vec = delta_vec,
+      delta_in_region = delta_in_region
+    )
+  )
+}
+
+conf_region <- function(
+  x_E.,
+  x_C.,
+  n_E,
+  n_C,
+  alpha = 0.05,
+  method,
+  size_acc = 3
+){
+  # for testing
+  x_E. = 10
+  x_C. = 20
+  n_E <- 100
+  n_C <- 100
+  alpha <- 0.05
+  method <- "RD"
+
+  cr_appr <- conf_region_appr(
+    x_E. = x_E.,
+    x_C. = x_C.,
+    n_E = n_E,
+    n_C = n_C,
+    alpha = alpha,
+    method = method,
+    better = better,
+    acc = acc
+  )
 }
 
 effect <- function(p_E, p_C, method){
@@ -594,24 +641,23 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   # Special case with very small sample sizes can lead to stat > start_value 
   # for all rows. Then set i <- 1
   i <- max(sum(stat<start_value), 1)
+  i.max <- length(stat)
   
   # Define rough grid for p_C
   acc <- 1
-  p_C <- seq(10^-acc, 1-10^-acc, by = 10^-acc)
+  p_C <- p_C.grid(method = method, delta = delta, acc = acc)
   
   # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
   # the null hypothesis
   p_E <- p_C.to.p_E(p_C, method, delta)
   
-  p_C <- p_C[p_E >= 0 & p_E <= 1]
-  p_E <- p_E[p_E >= 0 & p_E <= 1]
   
   # Calculate exact size for pair (p_C[i], p_E[i])
   pr <- sapply(1:length(p_C), function(j)
     sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
   
   # Increase index if maximal size is too low
-  while (max(pr) <= alpha) {
+  while (max(pr) <= alpha & i < i.max) {
     i <- i+1
     pr <- pr + stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
   }
@@ -621,14 +667,11 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   for (acc in 1:size_acc) {
     
     # Define grid for p_C
-    p_C <- seq(10^-acc, 1-10^-acc, by = 10^-acc)
+    p_C <- p_C.grid(method = method, delta = delta, acc = acc)
     
     # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
     # the null hypothesis
     p_E <- p_C.to.p_E(p_C, method, delta)
-    
-    p_C <- p_C[p_E >= 0 & p_E <= 1]
-    p_E <- p_E[p_E >= 0 & p_E <= 1]
     
     pr <- sapply(1:length(p_C), function(j)
       sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
@@ -641,25 +684,33 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
     }
     
   }
-  
-  # Decrease index further as long as rows have the same test statistic value
-  while (stat[i+1] == stat[i] & i >= 1) {
-    pr <- pr - stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
-    i <- i-1
-  }
-  
-  # Critical value can now be chosen between stat[i+1] and stat[i]
-  crit.val.mid <- (stat[i+1] + stat[i])/2
-  
-  # Return range of critical values and maximal size
-  return(
-    list(
+  if(i == 0){
+    result <- list(
+      crit.val.lb = Inf,
+      crit.val.mid = Inf,
+      crit.val.ub = stat[1],
+      max.size = 0
+    )
+  } else {
+    # Decrease index further as long as rows have the same test statistic value
+    while (stat[i+1] == stat[i] & i >= 1) {
+      pr <- pr - stats::dbinom(x_C[i], n_C, p_C) * stats::dbinom(x_E[i], n_E, p_E)
+      i <- i-1
+    }
+    
+    # Critical value can now be chosen between stat[i+1] and stat[i]
+    crit.val.mid <- (stat[i+1] + stat[i])/2
+    
+    result <- list(
       crit.val.lb = stat[i],
       crit.val.mid = crit.val.mid,
       crit.val.ub = stat[i+1],
       max.size = max(pr)
     )
-  )
+  }
+  
+  
+  return(result)
 }
 
 # Function to compute exact sample size
