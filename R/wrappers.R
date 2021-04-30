@@ -277,13 +277,13 @@ find_max_prob <- function(
   size_acc = 3
 ){
   if(calc_method == "uniroot"){
-    result <- max(find_max_prob_uniroot(
+    result <- find_max_prob_uniroot(
       df = df,
       n_E = n_E,
       n_C = n_C,
       method = method,
       delta = delta
-    ))
+    )
   }
   if(calc_method == "grid search"){
     # Define grid for p_C
@@ -293,15 +293,20 @@ find_max_prob <- function(
     # the null hypothesis
     p_E <- p_C.to.p_E(p_C, method, delta)
     
-    result <- max(power(
+    result <- power(
       df = df,
       n_E = n_E,
       n_C = n_C,
       p_EA = p_E,
       p_CA = p_C
-    ))
+    )
   }
-  return(result)
+  return(
+    list(
+      p_max = max(result),
+      p_vec = result
+    )
+  )
 }
 
 #' Calculate p-value(s)
@@ -366,7 +371,8 @@ p_value <- function(
   method,
   delta = NULL,
   size_acc = 3,
-  better = c("high", "low")
+  better = c("high", "low"),
+  calc_method = c("uniroot", "grid search")
 ){
   # Check if input is correctly specified
   check.pos.int(
@@ -402,33 +408,31 @@ p_value <- function(
     better = better
   )
   
-  # Define grid for p_C
-  p_C <- seq(10^-size_acc, 1-10^-size_acc, by = 10^-size_acc)
-  
-  # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
-  # the null hypothesis
-  p_E <- p_C.to.p_E(p_C, method, delta)
-  
-  p_C <- p_C[p_E >= 0 & p_E <= 1]
-  p_E <- p_E[p_E >= 0 & p_E <= 1]
-  
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
   df %>%
-    teststat(n_E, n_C, delta, method, better) %>%
+    teststat(
+      n_E = n_E,
+      n_C = n_C,
+      delta = delta,
+      method = method,
+      better = better
+    ) %>%
     dplyr::mutate(
       reject = stat >= stat[x_E == x_E. & x_C == x_C.]
     ) %>%
-    power(n_C, n_E, p_C, p_E) ->      # function power actually computes the rejection probability which in this case is the p-value
-    p.values
+    find_max_prob(
+      df = .,
+      n_E = n_E,
+      n_C = n_C,
+      method = method,
+      delta = delta,
+      calc_method = calc_method,
+      size_acc = size_acc
+    ) ->
+    result
   
-  # return vector of p-values. The "one" p-value would be max(p.values).
-  return(
-    list(
-      p_max = max(p.values),
-      p_vec = p.values
-    )
-  )
+  return(result)
 }
 
 conf_region_appr <- function(
@@ -444,13 +448,13 @@ conf_region_appr <- function(
 ){
   # preliminary
   if(method == "RD"){
-    delta_vec <- seq(-1, 1, length.out = 10^acc)
+    delta_vec <- seq(-1 + 10^-acc, 1 - 10^-acc, length.out = 10^acc)
   }
   if(method == "RR"){
-    delta_vec <- seq(0, 100, length.out = 10^acc)
+    delta_vec <- seq(0 + 10^-acc, 100, length.out = 10^acc)
   }
   if(method == "OR"){
-    delta_vec <- seq(0, 100, length.out = 10^acc)
+    delta_vec <- seq(0 + 10^-acc, 100, length.out = 10^acc)
   }
   delta_in_region <- rep(T, length(delta_vec))
   return(
@@ -468,15 +472,17 @@ conf_region <- function(
   n_C,
   alpha = 0.05,
   method,
-  size_acc = 3
+  size_acc = 3,
+  delta_acc = 2
 ){
-  # for testing
-  x_E. = 10
-  x_C. = 20
-  n_E <- 100
-  n_C <- 100
-  alpha <- 0.05
-  method <- "RD"
+  # # for testing
+  # x_E. = 10
+  # x_C. = 20
+  # n_E <- 100
+  # n_C <- 100
+  # alpha <- 0.05
+  # method <- "RR"
+  # delta_acc <- 2
 
   cr_appr <- conf_region_appr(
     x_E. = x_E.,
@@ -486,7 +492,60 @@ conf_region <- function(
     alpha = alpha,
     method = method,
     better = better,
-    acc = acc
+    acc = delta_acc
+  )
+  delta_vec <- cr_appr$delta_vec
+  delta_in_region <- c()
+  for (i in 1:length(delta_vec)) {
+    if(delta_vec[i] <= effect(p_E = x_E./n_E, p_C = x_C./n_C, method = method)){
+      p_val <- p_value(
+        x_E. = x_E.,
+        x_C. = x_C.,
+        n_E = n_E,
+        n_C = n_C,
+        better = "high",
+        method = method,
+        delta = delta_vec[i],
+        calc_method = "uniroot",
+        size_acc = size_acc
+      )
+      delta_in_region <- c(delta_in_region, p_val$p_max > alpha)
+    }
+    if(delta_vec[i] > effect(p_E = x_E./n_E, p_C = x_C./n_C, method = method)){
+      p_val <- p_value(
+        x_E. = x_E.,
+        x_C. = x_C.,
+        n_E = n_E,
+        n_C = n_C,
+        better = "low",
+        method = method,
+        delta = delta_vec[i],
+        calc_method = "uniroot",
+        size_acc = size_acc
+      )
+      delta_in_region <- c(delta_in_region, p_val$p_max > alpha)
+    }
+  }
+  
+  (1:length(delta_in_region))[delta_in_region] %>% 
+    diff() %>%
+    max() ->
+    max.diff
+  
+  connected <- max.diff <= 1
+  
+  largest.hole <- NA
+  if(!connected) largest.hole <- max.diff*10^-delta_acc
+  
+  return(
+    list(
+      delta_vec = delta_vec,
+      delta_in_region = delta_in_region,
+      lb = min(delta_vec[delta_in_region]),
+      ub = max(delta_vec[delta_in_region]),
+      connected = connected,
+      largest.hole = largest.hole
+    )
   )
 }
 
