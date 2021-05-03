@@ -195,7 +195,7 @@ find_max_prob_uniroot <- function(
   #   mutate( reject = stat >= qnorm(1-alpha)) ->
   #   df
   df %>%
-    filter(reject) ->
+    dplyr::filter(reject) ->
     df.
   
   if(method == "RD") interval.p_C <- c(max(0, -delta), min(1, 1-delta))

@@ -19,7 +19,7 @@ expand.grid(
     method = method,
     better = better
   ) %>%
-  mutate(
+  dplyr::mutate(
     reject = stat >= qnorm(1-alpha)
   ) ->
   df
