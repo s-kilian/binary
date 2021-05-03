@@ -53,13 +53,15 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
   w <- 1/3 * (pi + acos(ifelse(u == 0, 0, round(v/u^3, 10))))   # das round wurde eingebaut, weil wenn bei v/u^3 etwas minimal gr??er als 1 rauskommt es zu einer Fehlermeldung kommt! 
   # Define the solution
   p_E0 <- 2*u*cos(w) - b/(3*a)
-  p_C0 <- p_E0 - delta
+  p_C0 <- round(p_E0 - delta, 10)                  # round eingebaut aus gleichem Grund wie oben.
   
+  denom <- ifelse(p_E - p_C - delta == 0, 1, sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+  num <- p_E - p_C - delta
   if (better == "high"){
-   return <-  ifelse(p_E - p_C + delta == 0, 0, (p_E - p_C - delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+    return <-  num/denom
   }
   if (better == "low"){
-    return <- ifelse(p_E - p_C + delta == 0, 0, -(p_E - p_C - delta) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
+    return <- -num/denom
   }
   return(return)
   
@@ -103,13 +105,15 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   c <- delta * (p1hat + theta * p2hat)
   # Define the solution
   p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
-  p_C0 <- p_E0 / delta
+  p_C0 <- round(p_E0 / delta, 10)
   
+  denom <- ifelse(p_E - delta * p_C == 0, 1, sqrt(round(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C, 10)))
+  num <- p_E - delta * p_C
   if (better == "high"){
-    return <- ifelse(p_E - delta * p_C == 0, 0, (p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+    return <- num/denom
   }
   if (better == "low"){
-    return <- ifelse(p_E - delta * p_C == 0, 0, -(p_E - delta * p_C) /sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C))
+    return <- -num/denom
   }
     return(return)
 }
