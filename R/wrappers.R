@@ -82,16 +82,45 @@ teststat <- function(df, n_E, n_C, delta, method, better){
   }
   
   if (method == "OR") {
-    return <- df %>%
-      dplyr::mutate(s = x_C+x_E) %>%
-      dplyr::group_by(s) %>%
-      dplyr::mutate(
-        stat = BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
-      ) %>%
-      ungroup()
+    if(better == "high"){
+      return <- df %>%
+        dplyr::mutate(s = x_C+x_E) %>%
+        dplyr::group_by(s) %>%
+        dplyr::mutate(
+          stat = BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
+        ) %>%
+        ungroup()
+    }
+    if(better == "low"){
+      return <- df %>%
+        dplyr::mutate(s = x_C+x_E) %>%
+        dplyr::group_by(s) %>%
+        dplyr::mutate(
+          stat = 1 - BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
+        ) %>%
+        ungroup()
+    }
   }
   
   return(return)
+}
+
+# Calculate approximate quantile function of test statistic under H0
+appr_teststat_quantile <- function(
+  p,
+  method,
+  better
+){
+  check.0.1(
+    values = p,
+    message = "p has to be in interval (0, 1)."
+  )
+  
+  if(method == "RD") result <- stats::qnorm(p)
+  if(method == "RR") result <- stats::qnorm(p)
+  if(method == "OR") result <- p
+  
+  return(result)
 }
 
 # function to create grid for p_C
@@ -100,9 +129,9 @@ p_C.grid <- function(
   delta,
   acc
 ){
-  if(method == "RD") grid <- seq(max(0, -delta), min(1, 1-delta), by = 10^-acc)
-  if(method == "RR") grid <- seq(0, min(1, 1/delta), by = 10^-acc)
-  if(method == "OR") grid <- seq(0, 1, by = 10^-acc)
+  if(method == "RD") grid <- seq(max(0, -delta), min(1, 1-delta), length.out = 10^acc+1)
+  if(method == "RR") grid <- seq(0, min(1, 1/delta), length.out = 10^acc+1)
+  if(method == "OR") grid <- seq(0, 1, length.out = 10^acc+1)
   
   return(grid)
 }
@@ -198,10 +227,14 @@ find_max_prob_uniroot <- function(
     dplyr::filter(reject) ->
     df.
   
-  if(method == "RD") interval.p_C <- c(max(0, -delta), min(1, 1-delta))
-  if(method == "RR") interval.p_C <- c(0, min(1, 1/delta))
-  if(method == "OR") interval.p_C <- c(0, 1)
+  # Interval of possible values for p_C
+  interval.p_C <- p_C.grid(
+    method = method,
+    delta = delta,
+    acc = 0
+  )
   
+  # find roots of derivative of exact probability of rejection region
   rootSolve::uniroot.all(
     f = prob.derivative,
     interval = interval.p_C,
@@ -435,6 +468,91 @@ p_value <- function(
   return(result)
 }
 
+# calculate intervals where bounds of approximate confidence interval lie inside
+appr_confint_bound_intervals <- function(
+  x_E.,
+  x_C.,
+  n_E,
+  n_C,
+  alpha = 0.05,
+  method
+){
+  if(method == "RD"){
+    interval_lb <- c(
+      max(
+        x_E./n_E - x_C./n_C - appr_teststat_quantile(
+          p = 1-alpha,
+          method = "RD",
+          better = "high"
+        ) *
+          0.5*sqrt(1/n_E + 1/n_C),
+        -1
+      ),
+      min(
+        x_E./n_E - x_C./n_C,
+        1
+      )
+    )
+    interval_ub <- c(
+      max(
+        -1,
+        x_E./n_E - x_C./n_C
+      ),
+      min(
+        1,
+        x_E./n_E - x_C./n_C + appr_teststat_quantile(
+          p = 1-alpha,
+          method = "RD",
+          better = "high"
+        ) *
+          0.5*sqrt(1/n_E + 1/n_C)
+      )
+    )
+  } 
+  if(method == "RR"){
+    # has to be refined
+    interval_lb <- c(0, 10^1)
+    interval_ub <- c(0, 10^1)
+    # interval_lb <- c(
+    #   max(
+    #     0,
+    #     x_E./n_E / (x_C./n_C) - appr_teststat_quantile(
+    #       p = 1-alpha,
+    #       method = "RR",
+    #       better = "high"
+    #     ) *
+    #       0.5*sqrt(1/n_E + 1/n_C) / (x_C./n_C)
+    #   ),
+    #   x_E./n_E / (x_C./n_C)
+    # )
+    # interval_ub <- c(
+    #   max(
+    #     0,
+    #     x_E./n_E / (x_C./n_C)
+    #   ),
+    #   x_E./n_E / (x_C./n_C) + appr_teststat_quantile(
+    #     p = 1-alpha,
+    #     method = "RR",
+    #     better = "high"
+    #   ) *
+    #     0.5*sqrt(1/n_E + 1/n_C) / (x_C./n_C)
+    # )
+  } 
+  if(method == "OR"){
+    # has to be refined
+    interval_lb <- c(0, 10^1)
+    interval_ub <- c(0, 10^1)
+  } 
+  
+  return(
+    list(
+      interval_lb = interval_lb,
+      interval_ub = interval_ub
+    )
+  )
+}
+
+# approximate confidence interval
 conf_region_appr <- function(
   x_E.,
   x_C.,
@@ -443,25 +561,61 @@ conf_region_appr <- function(
   alpha = 0.05,
   method,
   size_acc = 3,
-  better = c("high", "low"),
   acc = 3
 ){
-  # preliminary
-  if(method == "RD"){
-    delta_vec <- seq(-1 + 10^-acc, 1 - 10^-acc, length.out = 10^acc)
+  # define function to find root
+  f <- function(delta.vec, better){
+    result <- c()
+    for(delta in delta.vec){
+      data.frame(
+        x_E = x_E.,
+        x_C = x_C.
+      ) %>%
+        teststat(
+          n_E = n_E,
+          n_C = n_C,
+          delta = delta,
+          method = method,
+          better = better
+        ) %>%
+        `[[`("stat") ->
+        u
+      result <- c(
+        result,
+        u - appr_teststat_quantile(
+          p = 1-alpha,
+          method = method,
+          better = better
+        )
+      )
+    }
+    
+      return(result)
   }
-  if(method == "RR"){
-    delta_vec <- seq(0 + 10^-acc, 100, length.out = 10^acc)
-  }
-  if(method == "OR"){
-    delta_vec <- seq(0 + 10^-acc, 100, length.out = 10^acc)
-  }
-  delta_in_region <- rep(T, length(delta_vec))
+  
+  bound_intervals <- appr_confint_bound_intervals(
+    x_E = x_E.,
+    x_C = x_C.,
+    n_E = n_E,
+    n_C = n_C,
+    alpha = alpha,
+    method = method
+  )
+  
+  # lower and upper bound of approximate conf. int.
+  lb <- rootSolve::uniroot.all(
+    f = f,
+    interval = bound_intervals$interval_lb,
+    better = "high"
+  ) %>% min()
+  ub <- rootSolve::uniroot.all(
+    f = f,
+    interval = bound_intervals$interval_ub,
+    better = "low"
+  ) %>% max()
+  
   return(
-    list(
-      delta_vec = delta_vec,
-      delta_in_region = delta_in_region
-    )
+    c(lb, ub)
   )
 }
 
@@ -481,23 +635,35 @@ conf_region <- function(
   # n_E <- 100
   # n_C <- 100
   # alpha <- 0.05
-  # method <- "RR"
+  # method <- "RD"
   # delta_acc <- 2
 
-  cr_appr <- conf_region_appr(
+  cr_appr_outer <- conf_region_appr(
     x_E. = x_E.,
     x_C. = x_C.,
     n_E = n_E,
     n_C = n_C,
-    alpha = alpha,
-    method = method,
-    better = better,
-    acc = delta_acc
+    alpha = alpha/2,
+    method = method
   )
-  delta_vec <- cr_appr$delta_vec
+  cr_appr_inner <- conf_region_appr(
+    x_E. = x_E.,
+    x_C. = x_C.,
+    n_E = n_E,
+    n_C = n_C,
+    alpha = alpha*2,
+    method = method
+  )
+  delta_vec_low <- c(
+    seq(cr_appr_outer[1], cr_appr_inner[1], by = 10^-delta_acc)
+  )
+  delta_vec_high <- c(
+    seq(cr_appr_inner[2], cr_appr_outer[2], by = 10^-delta_acc)
+  )
+    
   delta_in_region <- c()
-  for (i in 1:length(delta_vec)) {
-    if(delta_vec[i] <= effect(p_E = x_E./n_E, p_C = x_C./n_C, method = method)){
+  suppressWarnings(
+    for (i in 1:length(delta_vec_low)) {
       p_val <- p_value(
         x_E. = x_E.,
         x_C. = x_C.,
@@ -505,13 +671,15 @@ conf_region <- function(
         n_C = n_C,
         better = "high",
         method = method,
-        delta = delta_vec[i],
+        delta = delta_vec_low[i],
         calc_method = "uniroot",
         size_acc = size_acc
       )
       delta_in_region <- c(delta_in_region, p_val$p_max > alpha)
     }
-    if(delta_vec[i] > effect(p_E = x_E./n_E, p_C = x_C./n_C, method = method)){
+  )
+  suppressWarnings(
+    for (i in 1:length(delta_vec_high)) {
       p_val <- p_value(
         x_E. = x_E.,
         x_C. = x_C.,
@@ -519,13 +687,15 @@ conf_region <- function(
         n_C = n_C,
         better = "low",
         method = method,
-        delta = delta_vec[i],
+        delta = delta_vec_high[i],
         calc_method = "uniroot",
         size_acc = size_acc
       )
       delta_in_region <- c(delta_in_region, p_val$p_max > alpha)
     }
-  }
+  )
+  
+  delta_vec <- c(delta_vec_low, delta_vec_high)
   
   (1:length(delta_in_region))[delta_in_region] %>% 
     diff() %>%
@@ -544,7 +714,15 @@ conf_region <- function(
       lb = min(delta_vec[delta_in_region]),
       ub = max(delta_vec[delta_in_region]),
       connected = connected,
-      largest.hole = largest.hole
+      largest.hole = largest.hole,
+      ci_appr = conf_region_appr(
+        x_E. = x_E.,
+        x_C. = x_C.,
+        n_E = n_E,
+        n_C = n_C,
+        alpha = alpha,
+        method = method
+      )
     )
   )
 }
@@ -693,7 +871,11 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   
   # Find starting value for the search of critical value. E.g. take the
   # quantile of the approximate distribution of stat
-  start_value <- stats::qnorm(1-alpha) 
+  start_value <- appr_teststat_quantile(
+    p = 1-alpha,
+    method = method,
+    better = better
+  ) 
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
