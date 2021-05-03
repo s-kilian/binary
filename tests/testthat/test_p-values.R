@@ -57,4 +57,14 @@ conf_region(
   delta_acc = 2,
   size_acc = size_acc
 )
-
+method <- "RR"
+conf_region(
+  x_E. = x_E.,
+  x_C. = x_C.,
+  n_E = n_E,
+  n_C = n_C,
+  alpha = 0.05,
+  method = method,
+  delta_acc = 2,
+  size_acc = size_acc
+)
