@@ -284,7 +284,7 @@ test_that("Both calculation methods get equal results",{
       )[c("n_C", "n_E")]
     )
     
-    if(df$method = "OR"){
+    if(df$method[i] == "OR"){
       expand.grid(
         x_E = 0:df$n_E[i],
         x_C = 0:df$n_C[i]
@@ -301,10 +301,10 @@ test_that("Both calculation methods get equal results",{
           method = df$method[i],
           better = df$better[i]
         ) %>%
-        mutate(
+        dplyr::mutate(
           test = cond_p+stat
         ) %>%
-        summarize(
+        dplyr::summarize(
           deviation = max(test)-min(test)
         ) ->
         df.

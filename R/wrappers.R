@@ -89,7 +89,7 @@ teststat <- function(df, n_E, n_C, delta, method, better){
         dplyr::mutate(
           stat = BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
         ) %>%
-        ungroup()
+        dplyr::ungroup()
     }
     if(better == "low"){
       return <- df %>%
@@ -98,7 +98,7 @@ teststat <- function(df, n_E, n_C, delta, method, better){
         dplyr::mutate(
           stat = 1 - BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
         ) %>%
-        ungroup()
+        dplyr::ungroup()
     }
   }
   
