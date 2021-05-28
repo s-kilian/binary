@@ -1,1 +1,0 @@
-context("Test of calculation of test statistics")
