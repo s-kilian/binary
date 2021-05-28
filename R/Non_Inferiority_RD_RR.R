@@ -119,3 +119,5 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
 }
 
 
+
+

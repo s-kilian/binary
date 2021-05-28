@@ -1,2 +1,0 @@
-#' @param r allocation ratio
-#' 

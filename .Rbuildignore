@@ -4,6 +4,3 @@
 ^\.travis\.yml$
 ^template.R$
 ^example8.6.R$
-^LICENSE\.md$
-^man-roxygen$
-^README\.Rmd$
