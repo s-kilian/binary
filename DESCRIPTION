@@ -6,7 +6,7 @@ Author: Samuel Kilian <kilian@imbi.uni-heidelberg.de> and Laura Benner <benner@i
 Maintainer: Samuel Kilian <kilian@imbi.uni-heidelberg.de>
 Description: Exact tests for superiority and non-inferiority of two proportions,
     power and sample size calculations.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
@@ -15,4 +15,9 @@ Imports:
     BiasedUrn
 Suggests: 
     testthat
+Collate:
+   binary.R
+   boschloo-functions.R
+   input-checks.R
+   Non_Inferiority_RD_RR.R
 RoxygenNote: 7.0.2
