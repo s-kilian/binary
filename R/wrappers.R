@@ -851,7 +851,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
 }
 
 # function to compute the critical value of a specific test statistic
-critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
+critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_value = NULL){
   # method defines the used test with corresponding statistic and, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
   
@@ -869,13 +869,18 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   x_C <- df.stat$x_C
   x_E <- df.stat$x_E
   
-  # Find starting value for the search of critical value. E.g. take the
-  # quantile of the approximate distribution of stat
-  start_value <- appr_teststat_quantile(
-    p = 1-alpha,
-    method = method,
-    better = better
-  ) 
+  # Find starting value for the search of critical value. Take the
+  # quantile of the approximate distribution of stat of no value is provided.
+  if(
+    is.null(start_value)
+    ){
+    start_value <- appr_teststat_quantile(
+      p = 1-alpha,
+      method = method,
+      better = better
+    ) 
+  }
+  
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
@@ -1029,7 +1034,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
         df
       
       # Calculate raised nominal level
-      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
+      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
       
       # Calculate exact power
       df %>%
@@ -1068,7 +1073,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       df
     
     # Calculate raised nominal level
-    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
+    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
     
     # Calculate exact power
     df %>%

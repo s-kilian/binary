@@ -16,7 +16,8 @@ test_that("Functions work", {
   ) ->
     df
   
-  for(i in 1:3){
+  for(i in 1:4){
+    #st <- Sys.time()
     teststat(
       df = expand.grid(
         x_E = 0:df$n_E[i],
@@ -58,5 +59,7 @@ test_that("Functions work", {
       r = df$r[i],
       size_acc = df$size_acc[i]
     )
+    # en <- Sys.time()
+    # print(en-st)
   }
 })
