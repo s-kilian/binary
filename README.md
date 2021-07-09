@@ -4,7 +4,7 @@
 
 # binary
 
-Sample size calculation and determination of raised nominal level for the Fisher Boschloo test for superiority and non-inferiority trials.
+Exact tests of superiority and non-inferiority for binary endpoints, corresponding confidence regions, and exact sample size calculation.
 
 # References  
  [Boschloo, 1970]: Raised conditional level of significance for the 2 x 2-table
