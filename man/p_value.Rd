@@ -17,18 +17,24 @@ p_value(
 )
 }
 \arguments{
+\item{x_E.}{Number of events in experimental group.}
+
+\item{x_C.}{Number of events in control group.}
+
 \item{n_E}{Sample size in experimental group.}
 
 \item{n_C}{Sample size in control group.}
 
+\item{method}{Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".}
+
 \item{delta}{Non-inferiority margin.}
+
+\item{size_acc}{Accuracy of grid}
 
 \item{better}{"high" if higher values of x_E favour the alternative 
 hypothesis and "low" vice versa.}
 
-\item{x_E}{Number of events in experimental group.}
-
-\item{x_C}{Number of events in control group.}
+\item{calc_method}{"grid search" or "uniroot"}
 }
 \value{
 A list with the two elements \code{p_max} and \code{p_vec}.
