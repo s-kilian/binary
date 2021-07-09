@@ -7,3 +7,4 @@
 LICENSE\.md$
 ^man-roxygen$
 ^README\.Rmd$
+^\.github$

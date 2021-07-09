@@ -1,4 +1,4 @@
-[![Travis build status](https://travis-ci.com/s-kilian/binary.svg?branch=master)](https://travis-ci.com/s-kilian/binary)
+[![R-CMD-check](https://github.com/s-kilian/binary/workflows/R-CMD-check/badge.svg)](https://github.com/s-kilian/binary/actions)
 [![Codecov test coverage](https://codecov.io/gh/s-kilian/binary/branch/master/graph/badge.svg)](https://codecov.io/gh/s-kilian/binary?branch=master)
 
 
