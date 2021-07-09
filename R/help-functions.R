@@ -1,4 +1,4 @@
-#' Pipe operatir
+#' Pipe operator
 #' 
 #' Define magrittr's Pipe operator "%>%" locally for simplified programming.
 #'
