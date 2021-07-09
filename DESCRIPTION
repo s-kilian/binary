@@ -12,7 +12,8 @@ LazyData: true
 Imports:
     magrittr,
     dplyr,
-    BiasedUrn
+    BiasedUrn,
+    rootSolve
 Suggests: 
     testthat
 RoxygenNote: 7.0.2
