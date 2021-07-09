@@ -371,13 +371,18 @@ find_max_prob <- function(
 #' Small values of $T_{\OR, \delta}$ favour the alternative hypothesis.
 #' 
 #'  
-#' @param x_E Number of events in experimental group.
-#' @param x_C Number of events in control group.
+#' @param x_E. Number of events in experimental group.
+#' @param x_C. Number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
 #' @param better "high" if higher values of x_E favour the alternative 
 #' hypothesis and "low" vice versa.
+#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
+#' @param size_acc Accuracy of grid
+#' @param calc_method "grid search" or "uniroot"
+#' 
+#' 
 #' @return
 #' A list with the two elements \code{p_max} and \code{p_vec}.
 #' \code{p_max} is the maximum p-value and most likely servers as "the one" p-value.
