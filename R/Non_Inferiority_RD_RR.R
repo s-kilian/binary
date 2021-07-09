@@ -34,6 +34,9 @@
 #' @param better "high" if higher values of x_E favour the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
+#' 
+#' @export
+#' 
 #' @examples
 #' test_RD(3, 4, 10, 10, 0.2, "high")
 test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
@@ -91,6 +94,9 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 #' @param better "high" if higher values of x_E favour the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
+#' 
+#' @export
+#' 
 #' @examples
 #' test_RD(3, 4, 10, 10, 0.2, "high")
 test_RR <- function(x_E, x_C, n_E, n_C, delta, better){

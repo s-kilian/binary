@@ -51,6 +51,8 @@
 #' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
 #' 
+#' @export
+#' 
 #' @examples
 #' n_E <- 10
 #' n_C <- 11
@@ -390,6 +392,8 @@ find_max_prob <- function(
 #' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
 #' 
+#' @export
+#' 
 #' @examples
 #' p_value(
 #'   x_E. = 3,
@@ -412,6 +416,8 @@ p_value <- function(
   better = c("high", "low"),
   calc_method = c("uniroot", "grid search")
 ){
+  calc_method <- match.arg(calc_method)
+  
   # Check if input is correctly specified
   check.pos.int(
     size_acc,
