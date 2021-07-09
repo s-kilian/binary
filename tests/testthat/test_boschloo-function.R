@@ -2,8 +2,8 @@ context("Test results from literature")
 
 
 ## Testing function results ####################################################
-# Superiority
-
+## > Superiority #########
+## >> Power ########
 test_that("Boschloo-Power can be reproduced", {
 # Raised nominal level and exact maximal size: According to [Boschloo, 1970],
 # the raised nominal level for sample sizes 10 and 15 and true level alpha = 0.05
@@ -60,7 +60,7 @@ expect_equal(df$power, df$power2, tolerance = .001, scale = 1)
 })
 
 
-
+## >> Appr. sample size #######
 test_that("Approximate sample size can be reproduced", {
   
 # Approximate sample size for chi-quare test: According to [Kieser, 2018], the
@@ -102,7 +102,7 @@ expect_equal(df$n.appr, df$n.appr.2, tolerance = .5, scale = 1)
 })
 
 
-
+## >> Exact sample size #########
 test_that("Exact sample size can be reproduced", {
   
 # Exact sample size for Fisher-Boschloo test: According to [Kieser, 2018], the
@@ -186,7 +186,8 @@ expect_equal(df$n.ex, df$n.ex.2, tolerance = .5, scale = 1)
 
 
 
-
+## > Non-inferiority #########
+## >> Critical value (nominal level) ########
 test_that("Non-inferiority example", {
 
 # Non-inferiority
@@ -217,7 +218,7 @@ data.frame(
   size.2 = NA
 ) ->
   df
-# Calculate raised nominal level with function Raise.level.NI():
+# Calculate raised nominal level with function critval_boschloo_NI():
 for (i in 1:nrow(df)) {
   suppressWarnings(critval_boschloo_NI(
     alpha = df$alpha[i],
@@ -232,10 +233,101 @@ for (i in 1:nrow(df)) {
 }
 
 
-expect_equal(df$nom.alpha, df$nom.alpha.2, tolerance = .5, scale = 1)
+#expect_equal(df$nom.alpha, df$nom.alpha.2, tolerance = .5, scale = 1)
 
 
-expect_equal(df$size, df$size.2, tolerance = .5, scale = 1)
+expect_equal(df$size, df$size.2, tolerance = 10^-4, scale = 1)
 
 
+})
+
+## >> Equality of calculation methods #######
+test_that("Both calculation methods get equal results",{
+  data.frame(
+    method = "OR",
+    p_EA = 0.5,
+    p_CA = 0.3,
+    delta = 0.8,
+    alpha = 0.05,
+    beta = 0.2,
+    r = c(1, 2),
+    alternative = "greater",
+    better = "high",
+    size_acc = 3,
+    n_E = 48,
+    n_C = 48
+  ) ->
+    df
+  
+  for (i in 1:nrow(df)) {
+    expect_equal(
+      samplesize_exact_boschloo_NI(
+        p_EA = df$p_EA[i],
+        p_CA = df$p_CA[i],
+        gamma = df$delta[i],
+        alpha = df$alpha[i],
+        beta = df$beta[i],
+        r = df$r[i],
+        size_acc = df$size_acc[i],
+        alternative = df$alternative[i]
+      )[c("n_C", "n_E")],
+      samplesize_exact(
+        p_EA = df$p_EA[i],
+        p_CA = df$p_CA[i],
+        delta = df$delta[i],
+        alpha = df$alpha[i],
+        beta = df$beta[i],
+        r = df$r[i],
+        size_acc = df$size_acc[i],
+        better = df$better[i],
+        method = df$method[i]
+      )[c("n_C", "n_E")]
+    )
+    
+    if(df$method[i] == "OR"){
+      expand.grid(
+        x_E = 0:df$n_E[i],
+        x_C = 0:df$n_C[i]
+      ) %>%
+        teststat_boschloo_NI(
+          n_E = df$n_E[i],
+          n_C = df$n_C[i],
+          gamma = df$delta[i]
+        ) %>%
+        teststat(
+          n_E = df$n_E[i],
+          n_C = df$n_C[i],
+          delta = df$delta[i],
+          method = df$method[i],
+          better = df$better[i]
+        ) %>%
+        dplyr::mutate(
+          test = cond_p+stat
+        ) %>%
+        dplyr::summarize(
+          deviation = max(test)-min(test)
+        ) ->
+        df.
+      expect_equal(df.$deviation, 0, tolerance = 10^-10)
+      
+      expect_equal(
+        critval_boschloo_NI(
+          alpha = df$alpha[i],
+          n_C = df$n_C[i],
+          n_E = df$n_E[i],
+          gamma = df$delta[i],
+          size_acc = df$size_acc[i]
+        )[["nom_alpha_mid"]],
+        1- critval(
+          alpha = df$alpha[i],
+          n_C = df$n_C[i],
+          n_E = df$n_E[i],
+          delta = df$delta[i],
+          size_acc = df$size_acc[i],
+          method = df$method[i],
+          better = df$better[i]
+        )$crit.val.mid
+      )
+    }
+  }
 })

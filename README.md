@@ -1,10 +1,10 @@
-[![Travis build status](https://travis-ci.com/s-kilian/binary.svg?branch=master)](https://travis-ci.com/s-kilian/binary)
+[![R-CMD-check](https://github.com/s-kilian/binary/workflows/R-CMD-check/badge.svg)](https://github.com/s-kilian/binary/actions)
 [![Codecov test coverage](https://codecov.io/gh/s-kilian/binary/branch/master/graph/badge.svg)](https://codecov.io/gh/s-kilian/binary?branch=master)
 
 
 # binary
 
-Sample size calculation and determination of raised nominal level for the Fisher Boschloo test for superiority and non-inferiority trials.
+Exact tests of superiority and non-inferiority for binary endpoints, corresponding confidence regions, and exact sample size calculation.
 
 # References  
  [Boschloo, 1970]: Raised conditional level of significance for the 2 x 2-table
