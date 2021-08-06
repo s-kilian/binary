@@ -13,10 +13,10 @@ Imports:
     magrittr,
     dplyr,
     BiasedUrn,
-    rootSolve
-Suggests: 
-    testthat,
+    rootSolve,
     mathjaxr
+Suggests: 
+    testthat
 RoxygenNote: 7.1.1
 Roxygen: list(markdown = TRUE)
 RdMacros: mathjaxr
