@@ -6,13 +6,14 @@ Author: Samuel Kilian <kilian@imbi.uni-heidelberg.de> and Laura Benner <benner@i
 Maintainer: Samuel Kilian <kilian@imbi.uni-heidelberg.de>
 Description: Exact tests for superiority and non-inferiority of two proportions,
     power and sample size calculations.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
     magrittr,
     dplyr,
-    BiasedUrn
+    BiasedUrn,
+    rootSolve
 Suggests: 
     testthat
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1

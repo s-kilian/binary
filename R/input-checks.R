@@ -1,12 +1,14 @@
 ##..............................................................................
-##               Project: Fisher-Boschloo test
+##               Project: binary
 ##               Purpose: Provide functions to check input values.
 ##                 Input: none
 ##                Output: Functions:
 ##                        check.0.1: Value lies in open interval (0, 1)?
 ##                        check.pos.int: Value is positive integer?
+##                        check.delta.method.better: Delta fits method and better?
+##                        check.delta.null: Default delta value
+##                        check.effect.delta.better: Effect fits delta and better?
 ##      Date of creation: 2020-02-18
-##   Date of last update: 2020-02-18
 ##                Author: Samuel Kilian
 ##..............................................................................
 

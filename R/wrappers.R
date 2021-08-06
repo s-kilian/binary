@@ -51,6 +51,8 @@
 #' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
 #' 
+#' @export
+#' 
 #' @examples
 #' n_E <- 10
 #' n_C <- 11
@@ -371,19 +373,26 @@ find_max_prob <- function(
 #' Small values of $T_{\OR, \delta}$ favour the alternative hypothesis.
 #' 
 #'  
-#' @param x_E Number of events in experimental group.
-#' @param x_C Number of events in control group.
+#' @param x_E. Number of events in experimental group.
+#' @param x_C. Number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
 #' @param better "high" if higher values of x_E favour the alternative 
 #' hypothesis and "low" vice versa.
+#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
+#' @param size_acc Accuracy of grid
+#' @param calc_method "grid search" or "uniroot"
+#' 
+#' 
 #' @return
 #' A list with the two elements \code{p_max} and \code{p_vec}.
 #' \code{p_max} is the maximum p-value and most likely servers as "the one" p-value.
 #' \code{p_vec} is a named vector. The names indicate the true proportion pairs
 #' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
+#' 
+#' @export
 #' 
 #' @examples
 #' p_value(
@@ -407,6 +416,8 @@ p_value <- function(
   better = c("high", "low"),
   calc_method = c("uniroot", "grid search")
 ){
+  calc_method <- match.arg(calc_method)
+  
   # Check if input is correctly specified
   check.pos.int(
     size_acc,
@@ -851,7 +862,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
 }
 
 # function to compute the critical value of a specific test statistic
-critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
+critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_value = NULL){
   # method defines the used test with corresponding statistic and, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
   
@@ -869,13 +880,18 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better){
   x_C <- df.stat$x_C
   x_E <- df.stat$x_E
   
-  # Find starting value for the search of critical value. E.g. take the
-  # quantile of the approximate distribution of stat
-  start_value <- appr_teststat_quantile(
-    p = 1-alpha,
-    method = method,
-    better = better
-  ) 
+  # Find starting value for the search of critical value. Take the
+  # quantile of the approximate distribution of stat of no value is provided.
+  if(
+    is.null(start_value)
+    ){
+    start_value <- appr_teststat_quantile(
+      p = 1-alpha,
+      method = method,
+      better = better
+    ) 
+  }
+  
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
@@ -1029,7 +1045,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
         df
       
       # Calculate raised nominal level
-      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
+      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
       
       # Calculate exact power
       df %>%
@@ -1068,7 +1084,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       df
     
     # Calculate raised nominal level
-    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
+    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
     
     # Calculate exact power
     df %>%
