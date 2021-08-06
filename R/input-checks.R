@@ -25,6 +25,15 @@ check.0.1 <- function(
   }
 }
 
+check.alpha <- function(
+  alpha           # alpha that shall lie in the interval (0, 0.5]
+){
+  # Check whether alpha lie in interval (0, 0.5] and output error message if not
+  if (any(alpha <= 0 | alpha > 0.5)) {
+    stop("alpha has to be in interval (0, 0.5]")
+  }
+}
+
 check.pos.int <- function(
   values,           # vector of values that shall be positive integers
   message           # error message to display if one of the values is not a
