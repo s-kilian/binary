@@ -55,7 +55,7 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
   u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
   w <- 1/3 * (pi + acos(ifelse(u == 0, 0, round(v/u^3, 10))))   # das round wurde eingebaut, weil wenn bei v/u^3 etwas minimal gr??er als 1 rauskommt es zu einer Fehlermeldung kommt! 
   # Define the solution
-  p_E0 <- 2*u*cos(w) - b/(3*a)
+  p_E0 <- round(2*u*cos(w) - b/(3*a), 10)
   p_C0 <- round(p_E0 - delta, 10)                  # round eingebaut aus gleichem Grund wie oben.
   
   denom <- ifelse(p_E - p_C - delta == 0, 1, sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
