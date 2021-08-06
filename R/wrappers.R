@@ -754,6 +754,9 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
     better = better
   )
   
+  # Check whether alpha lies in the interval (0, 0.5]
+  check.alpha(alpha = alpha)
+  
   if(method == "RD"){
     # if low values of p_EA favor the alternative, flip probabilites and delta
     if(better == "low"){
@@ -978,7 +981,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
   # Accuracy of calculating the critical value can be specified by size_acc.
   # Output: Sample sizes per group (n_C, n_E), critical value and exact power.
   
-  # Check wheter p_EA, p_CA lie in the alternative hypothesis
+  # Check whether p_EA, p_CA lie in the alternative hypothesis
   check.effect.delta.better(
     p_E = p_EA,
     p_C = p_CA,
@@ -986,6 +989,9 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     delta = delta,
     better = better
   )
+  
+  # Check whether alpha lies in the interval (0, 0.5]
+  check.alpha(alpha = alpha)
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(
