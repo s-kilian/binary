@@ -10,34 +10,35 @@
 
 #' Calculate test statistic
 #' 
+#' \loadmathjax
 #' \code{teststat} takes a data frame with variables \code{x_E} and \code{x_C}
 #' and adds the variable \code{stat} with the value of the test statistic
 #' specified by \code{n_E}, \code{n_C}, \code{method}, \code{delta} and \code{better}.
 #' 
-#' If higher values of $x_E$ favour the alternative hypothesis (\code{better = "high"}), we are interested
+#' If higher values of \mjseqn{x_E} favour the alternative hypothesis (\code{better = "high"}), we are interested
 #' in testing the null hypothesis
-#' $$H_0: e(p_E, p_C) \le \delta ,$$
-#' where $e$ is one of the effect measures risk difference (\code{method = "RD"}),
+#' \mjsdeqn{H_0: e(p_E, p_C) \le \delta ,}
+#' where \mjseqn{e} is one of the effect measures risk difference (\code{method = "RD"}),
 #' risk ratio (\code{method = "RR"}), or odds ratio (\code{method = "OR"}).
 #' The test statistic for risk difference is
-#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E - p_C = \delta$.
-#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
+#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favour the alternative hypothesis.
 #' The test statistic for risk ratio is
-#' $$T_{\RR, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
-#' High values of $T_{\RR, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
+#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favour the alternative hypothesis.
 #' The test statistic for Odds Ratio
-#' $$ T_{\OR, \delta} = 1-(1 - F_{\ncHg(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) $$
+#' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
-#' $$ f_{\ncHg(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, $$
-#' where $A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}$.
-#' The density is zero if $k < \max(0, s-n_C)$ or $k > \min(n_E, s)$.
-#' High values of $T_{\OR, \delta}$ favour the alternative hypothesis (due to "1-...").
+#' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
+#' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
+#' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
+#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favour the alternative hypothesis (due to "1-...").
 #' 
-#' @param df data frame with variables x_E and x_C
+#' @param df data frame with variables \mjseqn{x_E} and \mjseqn{x_C}
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
@@ -46,9 +47,9 @@
 #' hypothesis and "low" vice versa.
 #' @return
 #' A list with the two elements \code{p_max} and \code{p_vec}.
-#' \code{p_max} is the maximum p-value and most likely servers as "the one" p-value.
+#' \code{p_max} is the maximum p-value and most likely serves as "the one" p-value.
 #' \code{p_vec} is a named vector. The names indicate the true proportion pairs
-#' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
+#' \mjseqn{(p_E, p_C)} with \mjseqn{e(p_E, p_C) = \delta} that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
 #' 
 #' @export
@@ -170,7 +171,24 @@ d.p_E.p_C <- function(p_C, method, delta){
   return(d.p_E.p_C)
 }
 
-# Calculate derivative after p_E of probability of a specific region under H0
+#' Calculate derivative of rejection probability
+#' 
+#' Calculate derivative after \mjseqn{p_E} of probability of a specific region under \mjseqn{H_0}.
+#' 
+#' 
+#' @param p_C.vec data frame with variables \mjseqn{x_E} and \mjseqn{x_C}
+#' @param x_E vector of values belonging to region
+#' @param x_C vector of values belonging to region
+#' @param n_E Sample size in experimental group.
+#' @param n_C Sample size in control group.
+#' @param delta Non-inferiority margin.
+#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
+#'
+#' @return
+#' Vector of values of the derivative
+#' 
+#' @export
+#' 
 prob.derivative <- function(
   p_C.vec,      # vector of true values of p_C
   x_E,          # vector of values belonging to region
@@ -346,31 +364,31 @@ find_max_prob <- function(
 
 #' Calculate p-value(s)
 #' 
-#' \code{p_value} returns the vector of p-values (dependent on the true $H_0$ proportions)
+#' \code{p_value} returns the vector of p-values (dependent on the true \mjseqn{H_0} proportions)
 #' and its maximum of the test for non-inferiority of two proportions specified by \code{method}.
 #' 
-#' If higher values of $x_E$ favour the alternative hypothesis (\code{better = "high"}), we are interested
+#' If higher values of \mjseqn{x_E} favour the alternative hypothesis (\code{better = "high"}), we are interested
 #' in testing the null hypothesis
-#' $$H_0: e(p_E, p_C) \le \delta ,$$
-#' where $e$ is one of the effect measures risk difference (\code{method = "RD"}),
+#' \mjsdeqn{H_0: e(p_E, p_C) \le \delta ,}
+#' where \mjseqn{e} is one of the effect measures risk difference (\code{method = "RD"}),
 #' risk ratio (\code{method = "RR"}), or odds ratio (\code{method = "OR"}).
 #' The test statistic for risk difference is
-#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E - p_C = \delta$.
-#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
+#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favour the alternative hypothesis.
 #' The test statistic for risk ratio is
-#' $$T_{\RR, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
-#' High values of $T_{\RR, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
+#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favour the alternative hypothesis.
 #' The test statistic for Odds Ratio
-#' $$ T_{\OR, \delta} = \sum\limits_{k = X_E}^\infty  f_{\ncHg(X_E+X_C, n_E, n_C, \delta)}(k) $$
+#' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
-#' $$ f_{\ncHg(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, $$
-#' where $A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}$.
-#' The density is zero if $k < \max(0, s-n_C)$ or $k > \min(n_E, s)$.
-#' Small values of $T_{\OR, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
+#' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
+#' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
+#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favour the alternative hypothesis (due to "1-...").
 #' 
 #'  
 #' @param x_E. Number of events in experimental group.
@@ -389,7 +407,7 @@ find_max_prob <- function(
 #' A list with the two elements \code{p_max} and \code{p_vec}.
 #' \code{p_max} is the maximum p-value and most likely servers as "the one" p-value.
 #' \code{p_vec} is a named vector. The names indicate the true proportion pairs
-#' $(p_E, p_C)$ with $e(p_E, p_C) = \delta$ that underly the calculation of
+#' \mjseqn{(p_E, p_C)} with \mjseqn{e(p_E, p_C) = \delta} that underly the calculation of
 #' the p-values. It can be used for plotting the p-value versus the true proportions.
 #' 
 #' @export

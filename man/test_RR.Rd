@@ -17,7 +17,7 @@ test_RR(x_E, x_C, n_E, n_C, delta, better)
 
 \item{delta}{Non-inferiority margin.}
 
-\item{better}{"high" if higher values of x_E favour the alternative 
+\item{better}{"high" if higher values of \mjseqn{x_E} favour the alternative
 hypothesis and "low" vice versa.}
 }
 \value{
@@ -28,15 +28,7 @@ Vector of values of the RD test statistic.
 for non-inferiority of the risk ratio between two proportions.
 }
 \details{
-If higher values of $x_E$ favour the alternative hypothesis, we are interested
-in testing the null hypothesis
-$$H_0: p_E / p_C \le \delta ,$$
-where the NI-margin is usually smaller than 1: $\delta < 1$.
-The test statistic for this hypothesis is
-$$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-$\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
-High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+
 }
 \examples{
 test_RD(3, 4, 10, 10, 0.2, "high")

@@ -16,22 +16,22 @@
 #' \code{test_RD} returns the value of the Farrington-Manning test statistic
 #' for non-inferiority of the risk difference between two proportions.
 #' 
-#' If higher values of $x_E$ favour the alternative hypothesis, we are interested
+#' If higher values of \mjseqn{x_E} favour the alternative hypothesis, we are interested
 #' in testing the null hypothesis
-#' $$H_0: p_E - p_C \le \delta ,$$
-#' where the NI-margin is usually non-positive: $\delta \le 0$.
+#' \mjsdeqn{H_0: p_E - p_C \le \delta ,}
+#' where the NI-margin is usually non-positive: \mjseqn{\delta \le 0}.
 #' The test statistic for this hypothesis is
-#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E - p_C = \delta$.
-#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
+#' High values of \mjseqn{T_{\RD, \delta}} favour the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param better "high" if higher values of x_E favour the alternative 
+#' @param better "high" if higher values of \mjseqn{x_E} favour the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' 
@@ -76,22 +76,22 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 #' \code{test_RR} returns the value of the Farrington-Manning test statistic
 #' for non-inferiority of the risk ratio between two proportions.
 #' 
-#' If higher values of $x_E$ favour the alternative hypothesis, we are interested
+#' If higher values of \mjseqn{x_E} favour the alternative hypothesis, we are interested
 #' in testing the null hypothesis
-#' $$H_0: p_E / p_C \le \delta ,$$
-#' where the NI-margin is usually smaller than 1: $\delta < 1$.
+#' \mjsdeqn{H_0: p_E / p_C \le \delta ,}
+#' where the NI-margin is usually smaller than 1: \mjseqn{\delta < 1}.
 #' The test statistic for this hypothesis is
-#' $$T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},$$
-#' where $\tilde p_C = \tilde p_C(x_E, x_C)$ is the MLE of $p_C$ and
-#' $\tilde p_E = \tilde p_C + \delta$ is the MLE of $p_E$ under $p_E / p_C = \delta$.
-#' High values of $T_{\RD, \delta}$ favour the alternative hypothesis.
+#' \mjsdeqn{T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
+#' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E$ under \mjseqn{p_E / p_C = \delta}.
+#' High values of \mjseqn{T_{\RD, \delta}} favour the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param better "high" if higher values of x_E favour the alternative 
+#' @param better "high" if higher values of \mjseqn{x_E} favour the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' 

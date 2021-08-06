@@ -15,5 +15,5 @@ lhs \%>\% rhs
 Function call rhs(lhs).
 }
 \description{
-Define magrittr's Pipe operator "%>%" locally for simplified programming.
+Define magrittr's Pipe operator "\%>\%" locally for simplified programming.
 }
