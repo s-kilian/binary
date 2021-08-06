@@ -12,12 +12,11 @@ LazyData: true
 Imports:
     magrittr,
     dplyr,
-    BiasedUrn
+    BiasedUrn,
+    rootSolve,
+    mathjaxr
 Suggests: 
     testthat
-Collate:
-   binary.R
-   boschloo-functions.R
-   input-checks.R
-   Non_Inferiority_RD_RR.R
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+RdMacros: mathjaxr
