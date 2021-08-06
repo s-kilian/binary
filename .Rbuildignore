@@ -8,3 +8,4 @@ LICENSE\.md$
 ^man-roxygen$
 ^README\.Rmd$
 ^\.github$
+^testtables.R$
