@@ -258,7 +258,7 @@ find_max_prob_uniroot <- function(
     power(
       df = df,
       n_C = n_C,
-      n_E = n_C,
+      n_E = n_E,
       p_CA = p_CA,
       p_EA = p_EA
     )
