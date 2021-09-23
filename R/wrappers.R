@@ -791,7 +791,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
     
     # Define the parameters for solving the equation
     v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
-    u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
+    if(v != 0) u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a)) else u <- 1
     w <- 1/3 * (pi + acos(v/u^3))
     
     # Define the solution
