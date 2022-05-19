@@ -155,7 +155,7 @@ p_C.to.p_E <- function(p_C, method, delta){
   return(p_E)
 }
 
-# function to compute d p_E/d p_C from p_C and NI-margin delta
+# function to compute derivation (d p_E)/(d p_C) from p_C and NI-margin delta
 d.p_E.p_C <- function(p_C, method, delta){
   
   if (method == "RR") {
@@ -217,6 +217,7 @@ prob.derivative <- function(
   return(result)
 }
 
+# function to find maxima of rejection probability via roots of derivative
 find_max_prob_uniroot <- function(
   df,             # data frame with variables x_E, x_C and reject
   n_E,
@@ -224,25 +225,7 @@ find_max_prob_uniroot <- function(
   method,
   delta
 ){
-  # # for testing
-  # method = "RR"
-  # n_E <- 100
-  # n_C <- 100
-  # delta <- 1.1
-  # alpha <- 0.05
-  # expand.grid(
-  #   x_E = 0:n_E,
-  #   x_C = 0:n_C
-  # ) %>%
-  #   teststat(
-  #     n_E = n_E,
-  #     n_C = n_C,
-  #     delta = delta,
-  #     method = method,
-  #     better = "high"
-  #   ) %>%
-  #   mutate( reject = stat >= qnorm(1-alpha)) ->
-  #   df
+  # filter to rejection region
   df %>%
     dplyr::filter(reject) ->
     df.
@@ -269,6 +252,7 @@ find_max_prob_uniroot <- function(
   ) ->
     roots
   
+  # maxima can be at the roots or at the border of the interval
   p_CA <- c(interval.p_C, roots)
   p_EA <- p_C.to.p_E(p_C = p_CA, method = method, delta = delta)
   
@@ -283,6 +267,7 @@ find_max_prob_uniroot <- function(
   )
 }
 
+# function to compute probability of rejection region
 power <- function(df, n_C, n_E, p_CA, p_EA){
   # Take data frame df with variable x_C and x_E representing all possible
   # response pairs for group sizes n_C and n_E and variable reject indicating
@@ -304,11 +289,12 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
   }
   
   
-  # compute uncond. size for every p
+  # filter to rejection region
   df %>%
     dplyr::filter(reject) ->
     df.reject
   
+  # calculate rejection probability
   sapply(
     1:length(p_CA),
     function(i) {
@@ -316,10 +302,13 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
     }
   ) ->
     result
+  
   names(result) <- paste(p_CA, p_EA, sep = ", ")
+  
   return(result)
 }
 
+# function to find maximum rejection probability
 find_max_prob <- function(
   df,             # data frame with variables x_E, x_C and reject
   n_E,
@@ -354,6 +343,7 @@ find_max_prob <- function(
       p_CA = p_C
     )
   }
+  
   return(
     list(
       p_max = max(result),
@@ -470,8 +460,10 @@ p_value <- function(
     better = better
   )
   
+  # data frame of all possible outcome pairs
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
+  # compute test statistic, rejection region, and maximum rejection probability under H_0
   df %>%
     teststat(
       n_E = n_E,
@@ -581,7 +573,7 @@ appr_confint_bound_intervals <- function(
   )
 }
 
-# approximate confidence interval
+# function to calculate approximate confidence interval
 conf_region_appr <- function(
   x_E.,
   x_C.,
@@ -756,6 +748,7 @@ conf_region <- function(
   )
 }
 
+# function to calculate the effect size
 effect <- function(p_E, p_C, method){
   if(method == "RD") effect <- p_E-p_C
   if(method == "RR") effect <- p_E/p_C
@@ -763,6 +756,8 @@ effect <- function(p_E, p_C, method){
   return(effect)
 }
 
+# function to calculate approximate sample sizes
+# documentation
 samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
   check.effect.delta.better(
     p_E = p_EA,
@@ -776,7 +771,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
   check.alpha(alpha = alpha)
   
   if(method == "RD"){
-    # if low values of p_EA favor the alternative, flip probabilites and delta
+    # if low values of p_EA favor the alternative, flip probabilities and delta
     if(better == "low"){
       p_EA <- 1-p_EA
       p_CA <- 1-p_CA
@@ -879,10 +874,11 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
     n_total<- n_E + n_C
   }
   
-  return(data.frame(n_total = n_total, n_E = n_E, n_C = n_C))
+  return(list(n_total = n_total, n_E = n_E, n_C = n_C))
 }
 
 # function to compute the critical value of a specific test statistic
+# documentation
 critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_value = NULL){
   # method defines the used test with corresponding statistic and, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
@@ -902,7 +898,7 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_
   x_E <- df.stat$x_E
   
   # Find starting value for the search of critical value. Take the
-  # quantile of the approximate distribution of stat of no value is provided.
+  # quantile of the approximate distribution of stat if no value is provided.
   if(
     is.null(start_value)
     ){
@@ -991,7 +987,8 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_
   return(result)
 }
 
-# Function to compute exact sample size
+# Function to calculate exact sample size
+# documentation
 samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
   # Calculate exact sample size for method "X and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and

@@ -1,6 +1,6 @@
 ##..............................................................................
-##               Project: Fisher-Boschloo test
-##               Purpose: Provide functions around Fisher-Boschloo test for the
+##               Project: Exact binary tests
+##               Purpose: Provide functions around Boschloo's test for the
 ##                        comparison of two groups with binary endpoint.
 ##                 Input: none
 ##                Output: Functions:
