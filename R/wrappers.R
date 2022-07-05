@@ -13,37 +13,38 @@
 #' \loadmathjax
 #' \code{teststat} takes a data frame with variables \code{x_E} and \code{x_C}
 #' and adds the variable \code{stat} with the value of the test statistic
-#' specified by \code{n_E}, \code{n_C}, \code{method}, \code{delta} and \code{better}.
+#' specified by \code{n_E}, \code{n_C}, \code{eff_meas}, \code{delta} and \code{better}.
 #' 
-#' If higher values of \mjseqn{x_E} favour the alternative hypothesis (\code{better = "high"}), we are interested
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis (\code{better = "high"}), we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: e(p_E, p_C) \le \delta ,}
-#' where \mjseqn{e} is one of the effect measures risk difference (\code{method = "RD"}),
-#' risk ratio (\code{method = "RR"}), or odds ratio (\code{method = "OR"}).
-#' The test statistic for risk difference is
+#' where \mjseqn{e} is one of the effect measures risk difference (\code{eff_meas = "RD"}),
+#' risk ratio (\code{eff_meas = "RR"}), or odds ratio (\code{eff_meas = "OR"}).
+#' The default test statistic for risk difference is
 #' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favour the alternative hypothesis.
-#' The test statistic for risk ratio is
+#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favor the alternative hypothesis.
+#' The default test statistic for risk ratio is
 #' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favour the alternative hypothesis.
-#' The test statistic for Odds Ratio
+#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favor the alternative hypothesis.
+#' The default test statistic for Odds Ratio
 #' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
 #' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
 #' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
 #' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
-#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favour the alternative hypothesis (due to "1-...").
+#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favor the alternative hypothesis (due to "1-...").
+#' Custom test statistics can be specified as a function
 #' 
 #' @param df data frame with variables \mjseqn{x_E} and \mjseqn{x_C}
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
-#' @param better "high" if higher values of x_E favour the alternative 
+#' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
+#' @param better "high" if higher values of x_E favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @return
 #' A list with the two elements \code{p_max} and \code{p_vec}.
@@ -65,26 +66,37 @@
 #'   df = df,
 #'   n_E = n_E,
 #'   n_C = n_C,
-#'   method = "RD",
+#'   eff_meas = "RD",
 #'   delta = -0.1,
 #'   better = "high"
 #' )
-teststat <- function(df, n_E, n_C, delta, method, better){
-  if (method == "RR") {
-    return <- df %>%
-      dplyr::mutate(
-        stat = test_RR(x_E, x_C, n_E, n_C, delta, better)
-      ) 
-  }
-  
-  if (method == "RD") {
-    return = df %>%
-      dplyr::mutate(
-        stat = test_RD(x_E, x_C, n_E, n_C, delta, better)
+default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
+  if (eff_meas == "RR") {
+    return <- list(
+      fun = test_RR,
+      extra_args = list(
+        better = better,
+        delta = delta,
+        n_E = n_E,
+        n_C = n_C
       )
+    )
   }
   
-  if (method == "OR") {
+  if (eff_meas == "RD") {
+    return <- list(
+      fun = test_RD,
+      extra_args = list(
+        better = better,
+        delta = delta,
+        n_E = n_E,
+        n_C = n_C
+      )
+    )
+  }
+  
+  #Baustelle
+  if (eff_meas == "OR") {
     if(better == "high"){
       return <- df %>%
         dplyr::mutate(s = x_C+x_E) %>%
@@ -111,14 +123,14 @@ teststat <- function(df, n_E, n_C, delta, method, better){
 # Calculate approximate quantile function of test statistic under H0
 appr_teststat_quantile <- function(
   p,
-  method,
+  test_stat,
   better
 ){
   check.0.1(
     values = p,
     message = "p has to be in interval (0, 1)."
   )
-  
+  # Baustelle
   if(method == "RD") result <- stats::qnorm(p)
   if(method == "RR") result <- stats::qnorm(p)
   if(method == "OR") result <- p
@@ -128,27 +140,27 @@ appr_teststat_quantile <- function(
 
 # function to create grid for p_C
 p_C.grid <- function(
-  method,
+  eff_meas,
   delta,
   acc
 ){
-  if(method == "RD") grid <- seq(max(0, -delta), min(1, 1-delta), length.out = 10^acc+1)
-  if(method == "RR") grid <- seq(0, min(1, 1/delta), length.out = 10^acc+1)
-  if(method == "OR") grid <- seq(0, 1, length.out = 10^acc+1)
+  if(eff_meas == "RD") grid <- seq(max(0, -delta), min(1, 1-delta), length.out = 10^acc+1)
+  if(eff_meas == "RR") grid <- seq(0, min(1, 1/delta), length.out = 10^acc+1)
+  if(eff_meas == "OR") grid <- seq(0, 1, length.out = 10^acc+1)
   
   return(grid)
 }
 
 # function to compute p_E from p_C and NI-margin delta s.t. effect(p_E, p_C) = delta
-p_C.to.p_E <- function(p_C, method, delta){
+p_C.to.p_E <- function(p_C, eff_meas, delta){
   
-  if (method == "RR") {
+  if (eff_meas == "RR") {
     p_E <- p_C * delta
   }
-  if (method == "RD") {
+  if (eff_meas == "RD") {
     p_E <- p_C + delta
   }
-  if (method == "OR") {
+  if (eff_meas == "OR") {
     p_E <- 1/(1+(1-p_C)/(delta*p_C))
   }
   
@@ -156,15 +168,15 @@ p_C.to.p_E <- function(p_C, method, delta){
 }
 
 # function to compute derivation (d p_E)/(d p_C) from p_C and NI-margin delta
-d.p_E.p_C <- function(p_C, method, delta){
+d.p_E.p_C <- function(p_C, eff_meas, delta){
   
-  if (method == "RR") {
+  if (eff_meas == "RR") {
     d.p_E.p_C <- rep(delta, length(p_C))
   }
-  if (method == "RD") {
+  if (eff_meas == "RD") {
     d.p_E.p_C <- rep(1, length(p_C))
   }
-  if (method == "OR") {
+  if (eff_meas == "OR") {
     d.p_E.p_C <- delta/(delta*p_C + 1 - p_C)^2
   }
   
@@ -182,7 +194,7 @@ d.p_E.p_C <- function(p_C, method, delta){
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
+#' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
 #'
 #' @return
 #' Vector of values of the derivative
@@ -195,15 +207,15 @@ prob.derivative <- function(
   x_C,          # vector of values belonging to region
   n_E,
   n_C,
-  method,
+  eff_meas,
   delta
 ){
   if(!(length(x_E) == length(x_C))){
     stop("x_E and x_C must have same length.")
   }
   
-  p_E.vec <- p_C.to.p_E(p_C = p_C.vec, method = method, delta = delta)
-  d.p_E.p_C <- d.p_E.p_C(p_C = p_C.vec, method = method, delta = delta)
+  p_E.vec <- p_C.to.p_E(p_C = p_C.vec, eff_meas = eff_meas, delta = delta)
+  d.p_E.p_C <- d.p_E.p_C(p_C = p_C.vec, eff_meas = eff_meas, delta = delta)
   
   result <- c()
   for (i in 1:length(p_C.vec)) {
@@ -222,7 +234,7 @@ find_max_prob_uniroot <- function(
   df,             # data frame with variables x_E, x_C and reject
   n_E,
   n_C,
-  method,
+  eff_meas,
   delta
 ){
   # filter to rejection region
@@ -232,7 +244,7 @@ find_max_prob_uniroot <- function(
   
   # Interval of possible values for p_C
   interval.p_C <- p_C.grid(
-    method = method,
+    eff_meas = eff_meas,
     delta = delta,
     acc = 0
   )
@@ -247,14 +259,14 @@ find_max_prob_uniroot <- function(
     x_C = df.$x_C,
     n_E = n_E,
     n_C = n_C,
-    method = method,
+    eff_meas = eff_meas,
     delta = delta
   ) ->
     roots
   
   # maxima can be at the roots or at the border of the interval
   p_CA <- c(interval.p_C, roots)
-  p_EA <- p_C.to.p_E(p_C = p_CA, method = method, delta = delta)
+  p_EA <- p_C.to.p_E(p_C = p_CA, eff_meas = eff_meas, delta = delta)
   
   return(
     power(
@@ -313,7 +325,7 @@ find_max_prob <- function(
   df,             # data frame with variables x_E, x_C and reject
   n_E,
   n_C,
-  method,
+  eff_meas,
   delta,
   calc_method = c("uniroot", "grid search"),     # method to find maximum
   size_acc = 3
@@ -323,17 +335,17 @@ find_max_prob <- function(
       df = df,
       n_E = n_E,
       n_C = n_C,
-      method = method,
+      eff_meas = eff_meas,
       delta = delta
     )
   }
   if(calc_method == "grid search"){
     # Define grid for p_C
-    p_C <- p_C.grid(method = method, delta = delta, acc = size_acc)
+    p_C <- p_C.grid(eff_meas = eff_meas, delta = delta, acc = size_acc)
     
     # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
     # the null hypothesis
-    p_E <- p_C.to.p_E(p_C, method, delta)
+    p_E <- p_C.to.p_E(p_C = p_C, eff_meas = eff_meas, delta = delta)
     
     result <- power(
       df = df,
@@ -355,30 +367,30 @@ find_max_prob <- function(
 #' Calculate p-value(s)
 #' 
 #' \code{p_value} returns the vector of p-values (dependent on the true \mjseqn{H_0} proportions)
-#' and its maximum of the test for non-inferiority of two proportions specified by \code{method}.
+#' and its maximum of the test for non-inferiority of two proportions specified by \code{eff_meas}.
 #' 
-#' If higher values of \mjseqn{x_E} favour the alternative hypothesis (\code{better = "high"}), we are interested
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis (\code{better = "high"}), we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: e(p_E, p_C) \le \delta ,}
-#' where \mjseqn{e} is one of the effect measures risk difference (\code{method = "RD"}),
-#' risk ratio (\code{method = "RR"}), or odds ratio (\code{method = "OR"}).
+#' where \mjseqn{e} is one of the effect measures risk difference (\code{eff_meas = "RD"}),
+#' risk ratio (\code{eff_meas = "RR"}), or odds ratio (\code{eff_meas = "OR"}).
 #' The test statistic for risk difference is
 #' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favour the alternative hypothesis.
+#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favor the alternative hypothesis.
 #' The test statistic for risk ratio is
 #' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favour the alternative hypothesis.
+#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favor the alternative hypothesis.
 #' The test statistic for Odds Ratio
 #' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
 #' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
 #' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
 #' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
-#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favour the alternative hypothesis (due to "1-...").
+#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favor the alternative hypothesis (due to "1-...").
 #' 
 #'  
 #' @param x_E. Number of events in experimental group.
@@ -386,9 +398,9 @@ find_max_prob <- function(
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param better "high" if higher values of x_E favour the alternative 
+#' @param better "high" if higher values of x_E favor the alternative 
 #' hypothesis and "low" vice versa.
-#' @param method Specifies the effect measure/test statistic. One of "RD", "RR", or "OR".
+#' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
 #' @param size_acc Accuracy of grid
 #' @param calc_method "grid search" or "uniroot"
 #' 
@@ -408,7 +420,7 @@ find_max_prob <- function(
 #'   x_C. = 4,
 #'   n_E = 10,
 #'   n_C = 10,
-#'   method = "RD",
+#'   eff_meas = "RD",
 #'   delta = -0.1,
 #'   size_acc = 3,
 #'   better = "high"
@@ -418,7 +430,7 @@ p_value <- function(
   x_C.,
   n_E,
   n_C,
-  method,
+  eff_meas,
   delta = NULL,
   size_acc = 3,
   better = c("high", "low"),
@@ -449,14 +461,14 @@ p_value <- function(
   
   # Set delta to default if not specified and throw warning
   delta <- check.delta.null(
-    method = method,
+    eff_meas = eff_meas,
     delta = delta
   )
   
   # Check if delta is in correct range
   check.delta.method.better(
     delta = delta, 
-    method = method,
+    eff_meas = eff_meas,
     better = better
   )
   
@@ -465,7 +477,7 @@ p_value <- function(
   
   # compute test statistic, rejection region, and maximum rejection probability under H_0
   df %>%
-    teststat(
+    teststat(#Baustelle
       n_E = n_E,
       n_C = n_C,
       delta = delta,
@@ -479,7 +491,7 @@ p_value <- function(
       df = .,
       n_E = n_E,
       n_C = n_C,
-      method = method,
+      eff_meas = eff_meas,
       delta = delta,
       calc_method = calc_method,
       size_acc = size_acc
@@ -496,14 +508,14 @@ appr_confint_bound_intervals <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  method
+  eff_meas
 ){
-  if(method == "RD"){
+  if(eff_meas == "RD"){
     interval_lb <- c(
       max(
         x_E./n_E - x_C./n_C - appr_teststat_quantile(
           p = 1-alpha,
-          method = "RD",
+          method = "RD",#baustelle
           better = "high"
         ) *
           0.5*sqrt(1/n_E + 1/n_C),
@@ -530,7 +542,7 @@ appr_confint_bound_intervals <- function(
       )
     )
   } 
-  if(method == "RR"){
+  if(eff_meas == "RR"){
     # has to be refined
     interval_lb <- c(0, 10^1)
     interval_ub <- c(0, 10^1)
@@ -559,7 +571,7 @@ appr_confint_bound_intervals <- function(
     #     0.5*sqrt(1/n_E + 1/n_C) / (x_C./n_C)
     # )
   } 
-  if(method == "OR"){
+  if(eff_meas == "OR"){
     # has to be refined
     interval_lb <- c(0, 10^1)
     interval_ub <- c(0, 10^1)
@@ -580,7 +592,7 @@ conf_region_appr <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  method,
+  method,#baustelle
   size_acc = 3,
   acc = 3
 ){
@@ -646,7 +658,7 @@ conf_region <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  method,
+  method,#baustelle
   size_acc = 3,
   delta_acc = 2
 ){
@@ -691,7 +703,7 @@ conf_region <- function(
         n_E = n_E,
         n_C = n_C,
         better = "high",
-        method = method,
+        eff_meas = eff_meas,
         delta = delta_vec_low[i],
         calc_method = "uniroot",
         size_acc = size_acc
@@ -707,7 +719,7 @@ conf_region <- function(
         n_E = n_E,
         n_C = n_C,
         better = "low",
-        method = method,
+        eff_meas = eff_meas,
         delta = delta_vec_high[i],
         calc_method = "uniroot",
         size_acc = size_acc
@@ -749,20 +761,20 @@ conf_region <- function(
 }
 
 # function to calculate the effect size
-effect <- function(p_E, p_C, method){
-  if(method == "RD") effect <- p_E-p_C
-  if(method == "RR") effect <- p_E/p_C
-  if(method == "OR") effect <- (p_E/(1-p_E))/(p_C/(1-p_C))
+effect <- function(p_E, p_C, eff_meas){
+  if(eff_meas == "RD") effect <- p_E-p_C
+  if(eff_meas == "RR") effect <- p_E/p_C
+  if(eff_meas == "OR") effect <- (p_E/(1-p_E))/(p_C/(1-p_C))
   return(effect)
 }
 
 # function to calculate approximate sample sizes
 # documentation
-samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
+samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, eff_meas, better){
   check.effect.delta.better(
     p_E = p_EA,
     p_C = p_CA,
-    method = method,
+    eff_meas = eff_meas,
     delta = delta,
     better = better
   )
@@ -770,7 +782,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
   # Check whether alpha lies in the interval (0, 0.5]
   check.alpha(alpha = alpha)
   
-  if(method == "RD"){
+  if(eff_meas == "RD"){
     # if low values of p_EA favor the alternative, flip probabilities and delta
     if(better == "low"){
       p_EA <- 1-p_EA
@@ -807,7 +819,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
   }
   
   
-  if(method == "RR"){
+  if(eff_meas == "RR"){
     # if low values of p_EA favor the alternative, swap groups and flip delta and r
     if(better == "low"){
       p_CA. <- p_EA
@@ -845,7 +857,7 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
     
   }
   
-  if(method == "OR"){
+  if(eff_meas == "OR"){
     if(better == "low"){
       p_CA. <- p_EA
       p_EA <- p_CA
@@ -879,8 +891,9 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, method, better){
 
 # function to compute the critical value of a specific test statistic
 # documentation
-critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_value = NULL){
-  # method defines the used test with corresponding statistic and, size_acc defines
+critval <- function(alpha, n_C, n_E, eff_meas,#baustelle
+                    delta, size_acc = 4, better, start_value = NULL){
+  # eff_meas defines the effect measure, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
   
   # Create data frame of all test statistics ordered by test statistic
@@ -919,11 +932,11 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_
   
   # Define rough grid for p_C
   acc <- 1
-  p_C <- p_C.grid(method = method, delta = delta, acc = acc)
+  p_C <- p_C.grid(eff_meas = eff_meas, delta = delta, acc = acc)
   
   # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
   # the null hypothesis
-  p_E <- p_C.to.p_E(p_C, method, delta)
+  p_E <- p_C.to.p_E(p_C = p_C, eff_meas = eff_meas, delta = delta)
   
   
   # Calculate exact size for pair (p_C[i], p_E[i])
@@ -941,11 +954,11 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_
   for (acc in 1:size_acc) {
     
     # Define grid for p_C
-    p_C <- p_C.grid(method = method, delta = delta, acc = acc)
+    p_C <- p_C.grid(eff_meas = eff_meas, delta = delta, acc = acc)
     
     # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
     # the null hypothesis
-    p_E <- p_C.to.p_E(p_C, method, delta)
+    p_E <- p_C.to.p_E(p_C = p_C, method = method, delta = delta)
     
     pr <- sapply(1:length(p_C), function(j)
       sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
@@ -989,8 +1002,8 @@ critval <- function(alpha, n_C, n_E, method, delta, size_acc = 4, better, start_
 
 # Function to calculate exact sample size
 # documentation
-samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, method, better){
-  # Calculate exact sample size for method "X and specified
+samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, eff_meas, better){
+  # Calculate exact sample size for eff_meas and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
   # NI-margin delta
   # Accuracy of calculating the critical value can be specified by size_acc.
@@ -1000,7 +1013,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
   check.effect.delta.better(
     p_E = p_EA,
     p_C = p_CA,
-    method = method,
+    eff_meas = eff_meas,
     delta = delta,
     better = better
   )
@@ -1016,7 +1029,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     alpha = alpha,
     beta = beta,
     r = r,
-    method = method,
+    eff_meas = eff_meas,
     better = better
   )
   
@@ -1029,11 +1042,11 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
     x_C = 0:n_C,
     x_E = 0:n_E
   ) %>%
-    teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better) ->
+    teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better) ->#baustelle
     df
   
   # Calculate critical value
-  crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better)["crit.val.mid"]
+  crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better)["crit.val.mid"]
   
   # Calculate exact power
   df %>%
@@ -1066,7 +1079,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
         df
       
       # Calculate raised nominal level
-      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
+      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better, start_value = crit.val)["crit.val.mid"]
       
       # Calculate exact power
       df %>%
@@ -1105,7 +1118,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, me
       df
     
     # Calculate raised nominal level
-    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, method = method, better = better, start_value = crit.val)["crit.val.mid"]
+    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better, start_value = crit.val)["crit.val.mid"]
     
     # Calculate exact power
     df %>%
