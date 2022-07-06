@@ -21,22 +21,22 @@
 #' where \mjseqn{e} is one of the effect measures risk difference (\code{eff_meas = "RD"}),
 #' risk ratio (\code{eff_meas = "RR"}), or odds ratio (\code{eff_meas = "OR"}).
 #' The default test statistic for risk difference is
-#' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favor the alternative hypothesis.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' The default test statistic for risk ratio is
-#' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favor the alternative hypothesis.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' The default test statistic for Odds Ratio
-#' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
+#' \mjsdeqn{ T_{\delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
 #' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
 #' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
 #' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
-#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favor the alternative hypothesis (due to "1-...").
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' Custom test statistics can be specified as a function
 #' 
 #' @param df data frame with variables \mjseqn{x_E} and \mjseqn{x_C}
@@ -73,7 +73,7 @@
 default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
   if (eff_meas == "RR") {
     return <- list(
-      fun = test_RR,
+      fun = test_stat_FM_RR,
       extra_args = list(
         better = better,
         delta = delta,
@@ -85,7 +85,7 @@ default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
   
   if (eff_meas == "RD") {
     return <- list(
-      fun = test_RD,
+      fun = test_stat_FM_RD,
       extra_args = list(
         better = better,
         delta = delta,
@@ -95,33 +95,23 @@ default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
     )
   }
   
-  #Baustelle
   if (eff_meas == "OR") {
-    if(better == "high"){
-      return <- df %>%
-        dplyr::mutate(s = x_C+x_E) %>%
-        dplyr::group_by(s) %>%
-        dplyr::mutate(
-          stat = BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
-        ) %>%
-        dplyr::ungroup()
-    }
-    if(better == "low"){
-      return <- df %>%
-        dplyr::mutate(s = x_C+x_E) %>%
-        dplyr::group_by(s) %>%
-        dplyr::mutate(
-          stat = 1 - BiasedUrn::pFNCHypergeo(x_E-1, n_E, n_C, s[1], delta)
-        ) %>%
-        dplyr::ungroup()
-    }
+    return <- list(
+      fun = test_stat_Boschloo_OR,
+      extra_args = list(
+        better = better,
+        delta = delta,
+        n_E = n_E,
+        n_C = n_C
+      )
+    )
   }
   
   return(return)
 }
 
 # Calculate approximate quantile function of test statistic under H0
-appr_teststat_quantile <- function(
+appr_test_stat_quantile <- function(
   p,
   test_stat,
   better
