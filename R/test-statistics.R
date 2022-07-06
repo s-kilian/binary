@@ -1,45 +1,39 @@
 ##..............................................................................
 ##               Project: Package binary (working title)
-##               Purpose: Provide template to implement exact test and sample
-##                        size calculation for arbitrary test statistic
-##                 Input: None
-##                Output: None
+##               Purpose: Provide test statistics for default tests
 ##      Date of creation: 2019-07-03
-##   Date of last update: 2019-07-04
 ##                Author: Samuel Kilian
 ##..............................................................................
 
-## Functions ###################################################################
-
-#' Calculate RD test statistic
+#' Calculate Farrington-Manning RD test statistic
 #' 
-#' \code{test_RD} returns the value of the Farrington-Manning test statistic
+#' \code{test_stat_FM_RD} returns the value of the Farrington-Manning test statistic
 #' for non-inferiority of the risk difference between two proportions.
 #' 
-#' If higher values of \mjseqn{x_E} favour the alternative hypothesis, we are interested
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: p_E - p_C \le \delta ,}
 #' where the NI-margin is usually non-positive: \mjseqn{\delta \le 0}.
 #' The test statistic for this hypothesis is
-#' \mjsdeqn{T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
-#' High values of \mjseqn{T_{\RD, \delta}} favour the alternative hypothesis.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param better "high" if higher values of \mjseqn{x_E} favour the alternative 
+#' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' 
 #' @export
 #' 
 #' @examples
-#' test_RD(3, 4, 10, 10, 0.2, "high")
-test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
+#' test_stat_FM_RD(3, 4, 10, 10, 0.2, "high")
+test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
   p_E <- x_E / n_E
   p_C <- x_C / n_C
   
@@ -71,35 +65,35 @@ test_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
 }
 
 
-#' Calculate RR test statistic
+#' Calculate Farrington-Manning RR test statistic
 #' 
-#' \code{test_RR} returns the value of the Farrington-Manning test statistic
+#' \code{test_stat_FM_RR} returns the value of the Farrington-Manning test statistic
 #' for non-inferiority of the risk ratio between two proportions.
 #' 
-#' If higher values of \mjseqn{x_E} favour the alternative hypothesis, we are interested
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: p_E / p_C \le \delta ,}
 #' where the NI-margin is usually smaller than 1: \mjseqn{\delta < 1}.
 #' The test statistic for this hypothesis is
-#' \mjsdeqn{T_{\RD, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E$ under \mjseqn{p_E / p_C = \delta}.
-#' High values of \mjseqn{T_{\RD, \delta}} favour the alternative hypothesis.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
 #' @param x_C Vector of number of events in control group.
 #' @param n_E Sample size in experimental group.
 #' @param n_C Sample size in control group.
 #' @param delta Non-inferiority margin.
-#' @param better "high" if higher values of \mjseqn{x_E} favour the alternative 
+#' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @return Vector of values of the RD test statistic.
 #' 
 #' @export
 #' 
 #' @examples
-#' test_RD(3, 4, 10, 10, 0.2, "high")
-test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
+#' test_stat_FM_RR(3, 4, 10, 10, 0.2, "high")
+test_stat_FM_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
   p_C <- x_C / n_C
   
@@ -125,5 +119,49 @@ test_RR <- function(x_E, x_C, n_E, n_C, delta, better){
 }
 
 
-
+#' Calculate Boschloo's test statistic
+#' 
+#' \code{test_stat_Boschloo_OR} returns the value of Boschloo's test statistic
+#' for non-inferiority of the odds ratio between two proportions.
+#' 
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
+#' in testing the null hypothesis
+#' \mjsdeqn{H_0: p_E/(1-p_E) / (p_C/(1-p_C)) \le \delta ,}
+#' where the NI-margin is usually smaller than 1: \mjseqn{\delta < 1}.
+#' The test statistic
+#' \mjsdeqn{ T_{\delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
+#' is based on Fisher's non-central hypergeometric distribution with density
+#' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
+#' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
+#' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' 
+#' @param x_E Vector of number of events in experimental group.
+#' @param x_C Vector of number of events in control group.
+#' @param n_E Sample size in experimental group.
+#' @param n_C Sample size in control group.
+#' @param delta Non-inferiority margin.
+#' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
+#' hypothesis and "low" vice versa.
+#' @return Vector of values of the RD test statistic.
+#' 
+#' @export
+#' 
+#' @examples
+#' test_stat_Boschloo_OR(3, 4, 10, 10, 0.2, "high")
+test_stat_Boschloo_OR <- function(x_E, x_C, n_E, n_C, delta, better){
+  if(better == "high"){
+    return <- sapply(
+      1:length(x_E),
+      function(i) BiasedUrn::pFNCHypergeo(x_E[i]-1, n_E, n_C, x_E[i]+x_C[i], delta)
+    )
+  }
+  if(better == "low"){
+    return <- sapply(
+      1:length(x_E),
+      function(i) 1 - BiasedUrn::pFNCHypergeo(x_E[i]-1, n_E, n_C, x_E[i]+x_C[i], delta)
+    )
+  }
+  return(return)
+}
 
