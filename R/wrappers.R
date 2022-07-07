@@ -8,7 +8,7 @@
 ##                Author: Samuel Kilian
 ##..............................................................................
 
-#' Calculate test statistic
+#' Calculate default test statistic
 #' 
 #' \loadmathjax
 #' \code{teststat} takes a data frame with variables \code{x_E} and \code{x_C}
@@ -37,7 +37,6 @@
 #' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
 #' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
 #' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
-#' Custom test statistics can be specified as a function
 #' 
 #' @param df data frame with variables \mjseqn{x_E} and \mjseqn{x_C}
 #' @param n_E Sample size in experimental group.
@@ -70,15 +69,13 @@
 #'   delta = -0.1,
 #'   better = "high"
 #' )
-default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
+default_test_stat <- function(delta, eff_meas, better){
   if (eff_meas == "RR") {
     return <- list(
       fun = test_stat_FM_RR,
       extra_args = list(
         better = better,
-        delta = delta,
-        n_E = n_E,
-        n_C = n_C
+        delta = delta
       )
     )
   }
@@ -88,9 +85,7 @@ default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
       fun = test_stat_FM_RD,
       extra_args = list(
         better = better,
-        delta = delta,
-        n_E = n_E,
-        n_C = n_C
+        delta = delta
       )
     )
   }
@@ -100,9 +95,7 @@ default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
       fun = test_stat_Boschloo_OR,
       extra_args = list(
         better = better,
-        delta = delta,
-        n_E = n_E,
-        n_C = n_C
+        delta = delta
       )
     )
   }
@@ -110,20 +103,20 @@ default_test_stat <- function(df, n_E, n_C, delta, eff_meas, better){
   return(return)
 }
 
-# Calculate approximate quantile function of test statistic under H0
+# Calculate approximate quantile function of default test statistics under H0
 appr_test_stat_quantile <- function(
   p,
-  test_stat,
-  better
+  test_stat            # a list list(fun = , extra_args = )
 ){
   check.0.1(
     values = p,
     message = "p has to be in interval (0, 1)."
   )
-  # Baustelle
-  if(method == "RD") result <- stats::qnorm(p)
-  if(method == "RR") result <- stats::qnorm(p)
-  if(method == "OR") result <- p
+  
+  result <- NULL
+  if(test_stat$fun == test_stat_FM_RD) result <- stats::qnorm(p)
+  if(test_stat$fun == test_stat_FM_RR) result <- stats::qnorm(p)
+  if(test_stat$fun == test_stat_Boschloo_OR) result <- p
   
   return(result)
 }
@@ -207,15 +200,15 @@ prob.derivative <- function(
   p_E.vec <- p_C.to.p_E(p_C = p_C.vec, eff_meas = eff_meas, delta = delta)
   d.p_E.p_C <- d.p_E.p_C(p_C = p_C.vec, eff_meas = eff_meas, delta = delta)
   
-  result <- c()
-  for (i in 1:length(p_C.vec)) {
-    result <- c(result,
-                sum(
-                  dbinom(x_E, n_E, p_E.vec[i])*dbinom(x_C, n_C, p_C.vec[i])*
-                    (x_E/p_E.vec[i]*d.p_E.p_C[i] - (n_E-x_E)/(1-p_E.vec[i])*d.p_E.p_C[i] + x_C/p_C.vec[i] - (n_C-x_C)/(1-p_C.vec[i]))
-                )
-    )
-  }
+  result <- sapply(
+    1:length(p_C.vec),
+    function(i){
+      sum(
+        dbinom(x_E, n_E, p_E.vec[i])*dbinom(x_C, n_C, p_C.vec[i])*
+          (x_E/p_E.vec[i]*d.p_E.p_C[i] - (n_E-x_E)/(1-p_E.vec[i])*d.p_E.p_C[i] + x_C/p_C.vec[i] - (n_C-x_C)/(1-p_C.vec[i]))
+      )
+    }
+  )
   return(result)
 }
 
@@ -227,10 +220,6 @@ find_max_prob_uniroot <- function(
   eff_meas,
   delta
 ){
-  # filter to rejection region
-  df %>%
-    dplyr::filter(reject) ->
-    df.
   
   # Interval of possible values for p_C
   interval.p_C <- p_C.grid(
@@ -245,8 +234,8 @@ find_max_prob_uniroot <- function(
     interval = interval.p_C,
     n = 100,
     maxiter = 10^4,
-    x_E = df.$x_E,
-    x_C = df.$x_C,
+    x_E = df$x_E[df$reject],
+    x_C = df$x_C[df$reject],
     n_E = n_E,
     n_C = n_C,
     eff_meas = eff_meas,
@@ -277,8 +266,8 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
   # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
   
   if (
-    n_C+1 != df %>% dplyr::pull(x_C) %>% unique() %>% length() |
-    n_E+1 != df %>% dplyr::pull(x_E) %>% unique() %>% length()
+    n_C+1 != length(unique(df$x_C)) |
+    n_E+1 != length(unique(df$x_E))
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -290,17 +279,11 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
     stop("p_CA and p_EA must have same length and values in [0, 1].")
   }
   
-  
-  # filter to rejection region
-  df %>%
-    dplyr::filter(reject) ->
-    df.reject
-  
   # calculate rejection probability
   sapply(
     1:length(p_CA),
     function(i) {
-      sum(stats::dbinom(df.reject$x_C, n_C, p_CA[i])*stats::dbinom(df.reject$x_E, n_E, p_EA[i]))
+      sum(stats::dbinom(df$x_C[df$reject], n_C, p_CA[i])*stats::dbinom(df$x_E[df$reject], n_E, p_EA[i]))
     }
   ) ->
     result
@@ -364,24 +347,27 @@ find_max_prob <- function(
 #' \mjsdeqn{H_0: e(p_E, p_C) \le \delta ,}
 #' where \mjseqn{e} is one of the effect measures risk difference (\code{eff_meas = "RD"}),
 #' risk ratio (\code{eff_meas = "RR"}), or odds ratio (\code{eff_meas = "OR"}).
-#' The test statistic for risk difference is
-#' \mjsdeqn{T_{\mbox{RD}, \delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' The default test statistic for risk difference is
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat{p_E} - \hat p_C - \delta}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E - p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RD}, \delta}} favor the alternative hypothesis.
-#' The test statistic for risk ratio is
-#' \mjsdeqn{T_{\mbox{RR}, \delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' The default test statistic for risk ratio is
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \delta \cdot \hat p_C}{\sqrt{\frac{\tilde p_E(1 - \tilde p_E)}{n_E} + \delta^2\frac{\tilde p_C(1 - \tilde p_C)}{n_C}}},}
 #' where \mjseqn{\tilde p_C = \tilde p_C(x_E, x_C)} is the MLE of \mjseqn{p_C} and
 #' \mjseqn{\tilde p_E = \tilde p_C + \delta} is the MLE of \mjseqn{p_E} under \mjseqn{p_E / p_C = \delta}.
-#' High values of \mjseqn{T_{\mbox{RR}, \delta}} favor the alternative hypothesis.
-#' The test statistic for Odds Ratio
-#' \mjsdeqn{ T_{\mbox{OR}, \delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' The default test statistic for Odds Ratio
+#' \mjsdeqn{ T_{\delta} = 1-(1 - F_{\mbox{ncHg}(X_E+X_C, n_E, n_C, \delta)}(x_E-1)) }
 #' is based on Fisher's non-central hypergeometric distribution with density
 #' \mjsdeqn{ f_{\mbox{ncHg}(s, n_E, n_C, \delta)}(k) = \frac{\binom{n_E}{k}\cdot \binom{n_C}{s-k}\cdot \delta^k}{\sum\limits_{l \in A_{s, n_E, n_C}} \binom{n_E}{l}\cdot \binom{n_C}{s-l}\cdot \delta^l}, }
 #' where \mjseqn{A_{s, n_E, n_C} = \{\max(0, s-n_C), \dots, \min(n_E, s)\}}.
 #' The density is zero if \mjseqn{k < \max(0, s-n_C)} or \mjseqn{k > \min(n_E, s)}.
-#' High values of \mjseqn{T_{\mbox{OR}, \delta}} favor the alternative hypothesis (due to "1-...").
-#' 
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' Custom test statistics can be defined as a list with arguments \code{fun} and
+#' \code{extra_args}. \code{fun} has to be a function with at least the arguments
+#' \code{x_E}, \code{x_C}, \code{n_E}, and \code{n_C} which get inserted automatically.
+#' Further arguments of \code{fun} can be given as a named list via \code{extra_args}.
 #'  
 #' @param x_E. Number of events in experimental group.
 #' @param x_C. Number of events in control group.
@@ -391,6 +377,7 @@ find_max_prob <- function(
 #' @param better "high" if higher values of x_E favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
+#' @param test_stat Can be used to define a custom test statistic as a list with arguments \code{fun} and \code{extra_args}.
 #' @param size_acc Accuracy of grid
 #' @param calc_method "grid search" or "uniroot"
 #' 
@@ -421,6 +408,7 @@ p_value <- function(
   n_E,
   n_C,
   eff_meas,
+  test_stat = NULL,
   delta = NULL,
   size_acc = 3,
   better = c("high", "low"),
@@ -456,37 +444,67 @@ p_value <- function(
   )
   
   # Check if delta is in correct range
-  check.delta.method.better(
+  check.delta.eff_meas.better(
     delta = delta, 
     eff_meas = eff_meas,
     better = better
   )
   
+  # Use default test statistic if test_stat is not given
+  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
+  
   # data frame of all possible outcome pairs
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
-  # compute test statistic, rejection region, and maximum rejection probability under H_0
-  df %>%
-    teststat(#Baustelle
-      n_E = n_E,
-      n_C = n_C,
-      delta = delta,
-      method = method,
-      better = better
-    ) %>%
-    dplyr::mutate(
-      reject = stat >= stat[x_E == x_E. & x_C == x_C.]
-    ) %>%
-    find_max_prob(
-      df = .,
-      n_E = n_E,
-      n_C = n_C,
-      eff_meas = eff_meas,
-      delta = delta,
-      calc_method = calc_method,
-      size_acc = size_acc
-    ) ->
-    result
+  # Compute test statistic
+  df$stat <- do.call(
+    what = test_stat$fun,
+    args = c(
+      list(
+        x_E = df$x_E,
+        x_C = df$x_C,
+        n_E = n_E,
+        n_C = n_C
+      ),
+      test_stat$extra_args
+    )
+  )
+  
+  # Compute rejection region
+  df$reject <- df$stat >= df$stat[df$x_E == x_E. & df$x_C == x_C.]
+  
+  # Compute maximum rejection probability under H_0
+  result <- find_max_prob(
+    df = df,
+    n_E = n_E,
+    n_C = n_C,
+    eff_meas = eff_meas,
+    delta = delta,
+    calc_method = calc_method,
+    size_acc = size_acc
+  )
+  
+  # df %>%
+  #   teststat(
+  #     n_E = n_E,
+  #     n_C = n_C,
+  #     delta = delta,
+  #     method = method,
+  #     better = better
+  #   ) %>%
+  #   dplyr::mutate(
+  #     reject = stat >= stat[x_E == x_E. & x_C == x_C.]
+  #   ) %>%
+  #   find_max_prob(
+  #     df = .,
+  #     n_E = n_E,
+  #     n_C = n_C,
+  #     eff_meas = eff_meas,
+  #     delta = delta,
+  #     calc_method = calc_method,
+  #     size_acc = size_acc
+  #   ) ->
+  #   result
   
   return(result)
 }
@@ -498,15 +516,15 @@ appr_confint_bound_intervals <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  eff_meas
+  eff_meas,
+  test_stat
 ){
-  if(eff_meas == "RD"){
+  if(test_stat$fun == test_stat_FM_RD){
     interval_lb <- c(
       max(
-        x_E./n_E - x_C./n_C - appr_teststat_quantile(
+        x_E./n_E - x_C./n_C - appr_test_stat_quantile(
           p = 1-alpha,
-          method = "RD",#baustelle
-          better = "high"
+          test_stat = test_stat
         ) *
           0.5*sqrt(1/n_E + 1/n_C),
         -1
@@ -523,45 +541,20 @@ appr_confint_bound_intervals <- function(
       ),
       min(
         1,
-        x_E./n_E - x_C./n_C + appr_teststat_quantile(
+        x_E./n_E - x_C./n_C + appr_test_stat_quantile(
           p = 1-alpha,
-          method = "RD",
-          better = "high"
+          test_stat = test_stat
         ) *
           0.5*sqrt(1/n_E + 1/n_C)
       )
     )
   } 
-  if(eff_meas == "RR"){
+  if(test_stat$fun == test_stat_FM_RR){
     # has to be refined
     interval_lb <- c(0, 10^1)
     interval_ub <- c(0, 10^1)
-    # interval_lb <- c(
-    #   max(
-    #     0,
-    #     x_E./n_E / (x_C./n_C) - appr_teststat_quantile(
-    #       p = 1-alpha,
-    #       method = "RR",
-    #       better = "high"
-    #     ) *
-    #       0.5*sqrt(1/n_E + 1/n_C) / (x_C./n_C)
-    #   ),
-    #   x_E./n_E / (x_C./n_C)
-    # )
-    # interval_ub <- c(
-    #   max(
-    #     0,
-    #     x_E./n_E / (x_C./n_C)
-    #   ),
-    #   x_E./n_E / (x_C./n_C) + appr_teststat_quantile(
-    #     p = 1-alpha,
-    #     method = "RR",
-    #     better = "high"
-    #   ) *
-    #     0.5*sqrt(1/n_E + 1/n_C) / (x_C./n_C)
-    # )
   } 
-  if(eff_meas == "OR"){
+  if(test_stat$fun == test_stat_Boschloo_OR){
     # has to be refined
     interval_lb <- c(0, 10^1)
     interval_ub <- c(0, 10^1)
@@ -582,7 +575,8 @@ conf_region_appr <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  method,#baustelle
+  eff_meas,
+  test_stat,
   size_acc = 3,
   acc = 3
 ){
@@ -590,25 +584,37 @@ conf_region_appr <- function(
   f <- function(delta.vec, better){
     result <- c()
     for(delta in delta.vec){
-      data.frame(
-        x_E = x_E.,
-        x_C = x_C.
-      ) %>%
-        teststat(
-          n_E = n_E,
-          n_C = n_C,
-          delta = delta,
-          method = method,
-          better = better
-        ) %>%
-        `[[`("stat") ->
+      do.call(
+        what = test_stat$fun,
+        args = c(
+          list(
+            x_E = x_E.,
+            x_C = x_C.,
+            n_E = n_E,
+            n_C = n_C
+          ),
+          test_stat$extra_args
+        )
+      ) ->
         u
+      # data.frame(
+      #   x_E = x_E.,
+      #   x_C = x_C.
+      # ) %>%
+      #   teststat(
+      #     n_E = n_E,
+      #     n_C = n_C,
+      #     delta = delta,
+      #     method = method,
+      #     better = better
+      #   ) %>%
+      #   `[[`("stat") ->
+      #   u
       result <- c(
         result,
-        u - appr_teststat_quantile(
+        u - appr_test_stat_quantile(
           p = 1-alpha,
-          method = method,
-          better = better
+          test_stat = test_stat
         )
       )
     }
@@ -622,20 +628,21 @@ conf_region_appr <- function(
     n_E = n_E,
     n_C = n_C,
     alpha = alpha,
-    method = method
+    eff_meas,
+    test_stat
   )
   
   # lower and upper bound of approximate conf. int.
-  lb <- rootSolve::uniroot.all(
+  lb <- min(rootSolve::uniroot.all(
     f = f,
     interval = bound_intervals$interval_lb,
     better = "high"
-  ) %>% min()
-  ub <- rootSolve::uniroot.all(
+  ))
+  ub <- max(rootSolve::uniroot.all(
     f = f,
     interval = bound_intervals$interval_ub,
     better = "low"
-  ) %>% max()
+  ))
   
   return(
     c(lb, ub)
@@ -648,7 +655,8 @@ conf_region <- function(
   n_E,
   n_C,
   alpha = 0.05,
-  method,#baustelle
+  eff_meas,
+  test_stat,
   size_acc = 3,
   delta_acc = 2
 ){
@@ -660,6 +668,8 @@ conf_region <- function(
   # alpha <- 0.05
   # method <- "RD"
   # delta_acc <- 2
+  
+  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
 
   cr_appr_outer <- conf_region_appr(
     x_E. = x_E.,
@@ -667,7 +677,8 @@ conf_region <- function(
     n_E = n_E,
     n_C = n_C,
     alpha = alpha/2,
-    method = method
+    eff_meas,
+    test_stat
   )
   cr_appr_inner <- conf_region_appr(
     x_E. = x_E.,
@@ -675,7 +686,8 @@ conf_region <- function(
     n_E = n_E,
     n_C = n_C,
     alpha = alpha*2,
-    method = method
+    eff_meas,
+    test_stat
   )
   delta_vec_low <- c(
     seq(cr_appr_outer[1], cr_appr_inner[1], by = 10^-delta_acc)
@@ -694,6 +706,7 @@ conf_region <- function(
         n_C = n_C,
         better = "high",
         eff_meas = eff_meas,
+        test_stat = test_stat,
         delta = delta_vec_low[i],
         calc_method = "uniroot",
         size_acc = size_acc
@@ -710,6 +723,7 @@ conf_region <- function(
         n_C = n_C,
         better = "low",
         eff_meas = eff_meas,
+        test_stat = test_stat,
         delta = delta_vec_high[i],
         calc_method = "uniroot",
         size_acc = size_acc
@@ -744,7 +758,8 @@ conf_region <- function(
         n_E = n_E,
         n_C = n_C,
         alpha = alpha,
-        method = method
+        eff_meas = eff_meas,
+        test_stat = eff_meas
       )
     )
   )
@@ -881,34 +896,54 @@ samplesize_appr <- function(p_EA, p_CA, delta, alpha, beta, r, eff_meas, better)
 
 # function to compute the critical value of a specific test statistic
 # documentation
-critval <- function(alpha, n_C, n_E, eff_meas,#baustelle
-                    delta, size_acc = 4, better, start_value = NULL){
+critval <- function(
+    alpha,
+    n_C,
+    n_E,
+    eff_meas,
+    test_stat,
+    delta,
+    size_acc = 4,
+    better,
+    start_value = NULL
+  ){
   # eff_meas defines the effect measure, size_acc defines
   # the accuracy of the grid used for the nuisance parameter p_C
   
   # Create data frame of all test statistics ordered by test statistic
-  expand.grid(
+  df.stat <- expand.grid(
     x_C = 0:n_C,
     x_E = 0:n_E
-  ) %>%
-    teststat(n_E, n_C, delta, method, better) %>%
-    dplyr::arrange(desc(stat)) ->
-    df.stat
+  )
   
-  # Extract stat, x_C and x_E as vector
-  stat <- df.stat$stat
-  x_C <- df.stat$x_C
-  x_E <- df.stat$x_E
+  # Compute test statistic
+  df.stat$stat <- do.call(
+    what = test_stat$fun,
+    args = c(
+      list(
+        x_E = df.stat$x_E,
+        x_C = df.stat$x_C,
+        n_E = n_E,
+        n_C = n_C
+      ),
+      test_stat$extra_args
+    )
+  )
+  
+  # Extract stat, x_C and x_E as vector and order them by stat
+  order <- order(df.stat$stat, decreasing = TRUE)
+  stat <- df.stat$stat[order]
+  x_C <- df.stat$x_C[order]
+  x_E <- df.stat$x_E[order]
   
   # Find starting value for the search of critical value. Take the
   # quantile of the approximate distribution of stat if no value is provided.
   if(
     is.null(start_value)
     ){
-    start_value <- appr_teststat_quantile(
+    start_value <- appr_test_stat_quantile(
       p = 1-alpha,
-      method = method,
-      better = better
+      test_stat = test_stat
     ) 
   }
   
@@ -992,7 +1027,7 @@ critval <- function(alpha, n_C, n_E, eff_meas,#baustelle
 
 # Function to calculate exact sample size
 # documentation
-samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, eff_meas, better){
+samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, eff_meas, test_stat, better){
   # Calculate exact sample size for eff_meas and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
   # NI-margin delta
