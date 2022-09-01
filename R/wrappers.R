@@ -392,16 +392,6 @@ find_max_prob <- function(
 #' @export
 #' 
 #' @examples
-#' p_value(
-#'   x_E. = 3,
-#'   x_C. = 4,
-#'   n_E = 10,
-#'   n_C = 10,
-#'   eff_meas = "RD",
-#'   delta = -0.1,
-#'   size_acc = 3,
-#'   better = "high"
-#' )
 p_value <- function(
   x_E.,
   x_C.,
@@ -929,6 +919,7 @@ critval <- function(
       test_stat$extra_args
     )
   )
+  #baustelle: Wie wird better bei custom test statistics berücksichtigt? Muss better überhaupt an die Funktion übergeben werden? Oder sollte das in Teststatistik codiert sein?
   
   # Extract stat, x_C and x_E as vector and order them by stat
   order <- order(df.stat$stat, decreasing = TRUE)
@@ -946,7 +937,7 @@ critval <- function(
       test_stat = test_stat
     ) 
   }
-  
+  #baustelle: returns NULL, if test_stat is not default. Idea: Take alpha-quantile of stat-vector
   
   # Find row number of df.stat corresponding to starting value
   # <- row of df.stat where stat is maximal with stat <= start_value
@@ -1061,6 +1052,26 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   # Use estimates as starting values
   n_C <- n_appr[["n_C"]]
   n_E <- n_appr[["n_E"]]
+  
+  # Create data frame of all test statistics ordered by test statistic
+  df <- expand.grid(
+    x_C = 0:n_C,
+    x_E = 0:n_E
+  )
+  
+  # Compute test statistic
+  df$stat <- do.call(
+    what = test_stat$fun,
+    args = c(
+      list(
+        x_E = df$x_E,
+        x_C = df$x_C,
+        n_E = n_E,
+        n_C = n_C
+      ),
+      test_stat$extra_args
+    )
+  )
   
   # Initiate data frame
   expand.grid(
