@@ -214,7 +214,9 @@ prob.derivative <- function(
 
 # function to find maxima of rejection probability via roots of derivative
 find_max_prob_uniroot <- function(
-  df,             # data frame with variables x_E, x_C and reject
+  x_E,
+  x_C,
+  reject,
   n_E,
   n_C,
   eff_meas,
@@ -234,8 +236,8 @@ find_max_prob_uniroot <- function(
     interval = interval.p_C,
     n = 100,
     maxiter = 10^4,
-    x_E = df$x_E[df$reject],
-    x_C = df$x_C[df$reject],
+    x_E = x_E[reject],
+    x_C = x_C[reject],
     n_E = n_E,
     n_C = n_C,
     eff_meas = eff_meas,
@@ -249,7 +251,9 @@ find_max_prob_uniroot <- function(
   
   return(
     power(
-      df = df,
+      x_E = x_E,
+      x_C = x_C,
+      reject = reject,
       n_C = n_C,
       n_E = n_E,
       p_CA = p_CA,
@@ -259,7 +263,7 @@ find_max_prob_uniroot <- function(
 }
 
 # function to compute probability of rejection region
-power <- function(df, n_C, n_E, p_CA, p_EA){
+power <- function(x_E, x_C, reject, n_C, n_E, p_CA, p_EA){
   # Take data frame df with variable x_C and x_E representing all possible
   # response pairs for group sizes n_C and n_E and variable reject indicating
   # whether coordinates belong to rejection region.
@@ -283,7 +287,7 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
   sapply(
     1:length(p_CA),
     function(i) {
-      sum(stats::dbinom(df$x_C[df$reject], n_C, p_CA[i])*stats::dbinom(df$x_E[df$reject], n_E, p_EA[i]))
+      sum(stats::dbinom(x_C[reject], n_C, p_CA[i])*stats::dbinom(x_E[reject], n_E, p_EA[i]))
     }
   ) ->
     result
@@ -295,7 +299,9 @@ power <- function(df, n_C, n_E, p_CA, p_EA){
 
 # function to find maximum rejection probability
 find_max_prob <- function(
-  df,             # data frame with variables x_E, x_C and reject
+  x_E,
+  x_C,
+  reject,
   n_E,
   n_C,
   eff_meas,
@@ -305,7 +311,7 @@ find_max_prob <- function(
 ){
   if(calc_method == "uniroot"){
     result <- find_max_prob_uniroot(
-      df = df,
+      df = df,# baustelle
       n_E = n_E,
       n_C = n_C,
       eff_meas = eff_meas,
@@ -321,7 +327,9 @@ find_max_prob <- function(
     p_E <- p_C.to.p_E(p_C = p_C, eff_meas = eff_meas, delta = delta)
     
     result <- power(
-      df = df,
+      x_E = x_E,
+      x_C = x_C,
+      reject = reject,
       n_E = n_E,
       n_C = n_C,
       p_EA = p_E,
@@ -377,7 +385,7 @@ find_max_prob <- function(
 #' @param better "high" if higher values of x_E favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
-#' @param test_stat Can be used to define a custom test statistic as a list with arguments \code{fun} and \code{extra_args}.
+#' @param test_stat Can be used to define a custom test statistic as a list with arguments \code{fun} and \code{extra_args}. High values favor the alternative hypothesis.
 #' @param size_acc Accuracy of grid
 #' @param calc_method "grid search" or "uniroot"
 #' 
@@ -465,7 +473,9 @@ p_value <- function(
   
   # Compute maximum rejection probability under H_0
   result <- find_max_prob(
-    df = df,
+    x_E = df$x_E,
+    x_C = df$X_C,
+    reject = df$reject,
     n_E = n_E,
     n_C = n_C,
     eff_meas = eff_meas,
@@ -500,6 +510,7 @@ p_value <- function(
 }
 
 # calculate intervals where bounds of approximate confidence interval lie inside
+# Baustelle
 appr_confint_bound_intervals <- function(
   x_E.,
   x_C.,
@@ -894,7 +905,6 @@ critval <- function(
     test_stat,
     delta,
     size_acc = 4,
-    better,
     start_value = NULL
   ){
   # eff_meas defines the effect measure, size_acc defines
@@ -919,8 +929,7 @@ critval <- function(
       test_stat$extra_args
     )
   )
-  #baustelle: Wie wird better bei custom test statistics berücksichtigt? Muss better überhaupt an die Funktion übergeben werden? Oder sollte das in Teststatistik codiert sein?
-  
+
   # Extract stat, x_C and x_E as vector and order them by stat
   order <- order(df.stat$stat, decreasing = TRUE)
   stat <- df.stat$stat[order]
@@ -937,13 +946,18 @@ critval <- function(
       test_stat = test_stat
     ) 
   }
-  #baustelle: returns NULL, if test_stat is not default. Idea: Take alpha-quantile of stat-vector
-  
-  # Find row number of df.stat corresponding to starting value
-  # <- row of df.stat where stat is maximal with stat <= start_value
-  # Special case with very small sample sizes can lead to stat > start_value 
-  # for all rows. Then set i <- 1
-  i <- max(sum(stat<start_value), 1)
+
+  # If appr_test_stat_quantile returns NULL, take the 1-alpha quantile of the stat vector as starting value
+  if(is.null(start_value)){
+    i <- ceiling(length(stat)*(1-alpha))
+    # Baustelle: Testen
+  } else {
+    # Find row number of df.stat corresponding to starting value
+    # <- row of df.stat where stat is maximal with stat <= start_value
+    # Special case with very small sample sizes can lead to stat > start_value 
+    # for all rows. Then set i <- 1
+    i <- max(sum(stat<start_value), 1)
+  }
   i.max <- length(stat)
   
   # Define rough grid for p_C
@@ -1073,22 +1087,31 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
     )
   )
   
-  # Initiate data frame
-  expand.grid(
-    x_C = 0:n_C,
-    x_E = 0:n_E
-  ) %>%
-    teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better) ->#baustelle
-    df
-  
   # Calculate critical value
-  crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better)["crit.val.mid"]
-  
+  crit.val <- critval(
+    alpha = alpha,
+    n_C = n_C,
+    n_E = n_E,
+    eff_meas = eff_meas,
+    test_stat = test_stat,
+    delta = delta,
+    size_acc = size_acc,
+    start_value = NULL
+  )["crit.val.mid"]
+  # Baustelle: data frame an crit.val übergeben, sodass teststat nicht neu berechnet werden muss?
+
   # Calculate exact power
-  df %>%
-    dplyr::mutate(reject = stat >= crit.val) %>%
-    power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+  power(
+    x_E = df$x_E,
+    x_C = df$x_C,
+    reject = df$stat >= crit.val,
+    n_C = n_C,
+    n_E = n_E,
+    p_CA = p_CA,
+    p_EA = p_EA
+  ) ->
     exact_power
+  #Baustelle: Ab hier und testen
   
   # Decrease sample size if power is too high
   if(exact_power > 1-beta){
