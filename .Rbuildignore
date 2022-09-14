@@ -3,6 +3,7 @@
 ^codecov\.yml$
 ^\.travis\.yml$
 ^template.R$
+params-for-develop.R^$
 ^example8.6.R$
 LICENSE\.md$
 ^man-roxygen$

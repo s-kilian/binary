@@ -76,7 +76,8 @@ default_test_stat <- function(delta, eff_meas, better){
       extra_args = list(
         better = better,
         delta = delta
-      )
+      ),
+      appr_quant_fun = stats::qnorm
     )
   }
   
@@ -86,7 +87,8 @@ default_test_stat <- function(delta, eff_meas, better){
       extra_args = list(
         better = better,
         delta = delta
-      )
+      ),
+      appr_quant_fun = stats::qnorm
     )
   }
   
@@ -96,17 +98,19 @@ default_test_stat <- function(delta, eff_meas, better){
       extra_args = list(
         better = better,
         delta = delta
-      )
+      ),
+      appr_quant_fun = identity
     )
   }
   
   return(return)
 }
+# Baustelle: OOP mit S3-Klassen, siehe https://adv-r.hadley.nz/s3.html#s3-constructor
 
 # Calculate approximate quantile function of default test statistics under H0
-appr_test_stat_quantile <- function(
+default_appr_test_stat_quantile <- function(
   p,
-  test_stat            # a list list(fun = , extra_args = )
+  eff_meas
 ){
   check.0.1(
     values = p,
@@ -114,9 +118,9 @@ appr_test_stat_quantile <- function(
   )
   
   result <- NULL
-  if(test_stat$fun == test_stat_FM_RD) result <- stats::qnorm(p)
-  if(test_stat$fun == test_stat_FM_RR) result <- stats::qnorm(p)
-  if(test_stat$fun == test_stat_Boschloo_OR) result <- p
+  if(eff_meas == "RD") result <- stats::qnorm(p)
+  if(eff_meas == "RR") result <- stats::qnorm(p)
+  if(eff_meas == "OR") result <- p
   
   return(result)
 }
@@ -311,7 +315,9 @@ find_max_prob <- function(
 ){
   if(calc_method == "uniroot"){
     result <- find_max_prob_uniroot(
-      df = df,# baustelle
+      x_E = x_E,
+      x_C = x_C,
+      reject = reject,
       n_E = n_E,
       n_C = n_C,
       eff_meas = eff_meas,
@@ -941,16 +947,12 @@ critval <- function(
   if(
     is.null(start_value)
     ){
-    start_value <- appr_test_stat_quantile(
-      p = 1-alpha,
-      test_stat = test_stat
-    ) 
+    start_value <- test_stat$appr_quant_fun(1-alpha) 
   }
 
-  # If appr_test_stat_quantile returns NULL, take the 1-alpha quantile of the stat vector as starting value
+  # If default_appr_test_stat_quantile returns NULL, take the 1-alpha quantile of the stat vector as starting value
   if(is.null(start_value)){
     i <- ceiling(length(stat)*(1-alpha))
-    # Baustelle: Testen
   } else {
     # Find row number of df.stat corresponding to starting value
     # <- row of df.stat where stat is maximal with stat <= start_value
@@ -1006,7 +1008,8 @@ critval <- function(
       crit.val.lb = Inf,
       crit.val.mid = Inf,
       crit.val.ub = stat[1],
-      max.size = 0
+      max.size = 0,
+      df.stat = df.stat
     )
   } else {
     # Decrease index further as long as rows have the same test statistic value
@@ -1022,7 +1025,8 @@ critval <- function(
       crit.val.lb = stat[i],
       crit.val.mid = crit.val.mid,
       crit.val.ub = stat[i+1],
-      max.size = max(pr)
+      max.size = max(pr),
+      df.stat = df.stat
     )
   }
   
@@ -1051,6 +1055,9 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   # Check whether alpha lies in the interval (0, 0.5]
   check.alpha(alpha = alpha)
   
+  # Use default test statistic if test_stat is not given
+  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
+  
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(
     p_EA = p_EA,
@@ -1067,28 +1074,28 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   n_C <- n_appr[["n_C"]]
   n_E <- n_appr[["n_E"]]
   
-  # Create data frame of all test statistics ordered by test statistic
-  df <- expand.grid(
-    x_C = 0:n_C,
-    x_E = 0:n_E
-  )
+  # # Create data frame of all test statistics ordered by test statistic
+  # df <- expand.grid(
+  #   x_C = 0:n_C,
+  #   x_E = 0:n_E
+  # )
+  # 
+  # # Compute test statistic
+  # df$stat <- do.call(
+  #   what = test_stat$fun,
+  #   args = c(
+  #     list(
+  #       x_E = df$x_E,
+  #       x_C = df$x_C,
+  #       n_E = n_E,
+  #       n_C = n_C
+  #     ),
+  #     test_stat$extra_args
+  #   )
+  # )
   
-  # Compute test statistic
-  df$stat <- do.call(
-    what = test_stat$fun,
-    args = c(
-      list(
-        x_E = df$x_E,
-        x_C = df$x_C,
-        n_E = n_E,
-        n_C = n_C
-      ),
-      test_stat$extra_args
-    )
-  )
-  
-  # Calculate critical value
-  crit.val <- critval(
+  # Calculate critical value and generate data frame with test statistic
+  crit.val.list <- critval(
     alpha = alpha,
     n_C = n_C,
     n_E = n_E,
@@ -1097,8 +1104,9 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
     delta = delta,
     size_acc = size_acc,
     start_value = NULL
-  )["crit.val.mid"]
-  # Baustelle: data frame an crit.val übergeben, sodass teststat nicht neu berechnet werden muss?
+  )
+  crit.val <- crit.val.list[["crit.val.mid"]]
+  df <- crit.val.list[["df.stat"]]
 
   # Calculate exact power
   power(
@@ -1111,8 +1119,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
     p_EA = p_EA
   ) ->
     exact_power
-  #Baustelle: Ab hier und testen
-  
+
   # Decrease sample size if power is too high
   if(exact_power > 1-beta){
     while(exact_power > 1-beta){
@@ -1129,21 +1136,30 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
         n_C <- ceiling(1/r*n_E)
       }
       
-      # Initiate data frame
-      expand.grid(
-        x_C = 0:n_C,
-        x_E = 0:n_E
-      ) %>%
-        teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better = better) ->
-        df
-      
-      # Calculate raised nominal level
-      crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better, start_value = crit.val)["crit.val.mid"]
+      # Calculate critical value and generate data frame with test statistic
+      crit.val.list <- critval(
+        alpha = alpha,
+        n_C = n_C,
+        n_E = n_E,
+        eff_meas = eff_meas,
+        test_stat = test_stat,
+        delta = delta,
+        size_acc = size_acc,
+        start_value = NULL
+      )
+      crit.val <- crit.val.list[["crit.val.mid"]]
+      df <- crit.val.list[["df.stat"]]
       
       # Calculate exact power
-      df %>%
-        dplyr::mutate(reject = stat >= crit.val) %>%
-        power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+      power(
+        x_E = df$x_E,
+        x_C = df$x_C,
+        reject = df$stat >= crit.val,
+        n_C = n_C,
+        n_E = n_E,
+        p_CA = p_CA,
+        p_EA = p_EA
+      ) ->
         exact_power
     }
     # Go one step back
@@ -1168,21 +1184,30 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
       n_C <- ceiling(1/r*n_E)
     }
     
-    # Initiate data frame
-    expand.grid(
-      x_C = 0:n_C,
-      x_E = 0:n_E
-    ) %>%
-      teststat(n_C = n_C, n_E = n_E, delta = delta, method = method, better = better) ->
-      df
-    
-    # Calculate raised nominal level
-    crit.val <- critval(alpha = alpha, n_C = n_C, n_E = n_E, delta = delta, size_acc = size_acc, eff_meas = eff_meas, better = better, start_value = crit.val)["crit.val.mid"]
+    # Calculate critical value and generate data frame with test statistic
+    crit.val.list <- critval(
+      alpha = alpha,
+      n_C = n_C,
+      n_E = n_E,
+      eff_meas = eff_meas,
+      test_stat = test_stat,
+      delta = delta,
+      size_acc = size_acc,
+      start_value = NULL
+    )
+    crit.val <- crit.val.list[["crit.val.mid"]]
+    df <- crit.val.list[["df.stat"]]
     
     # Calculate exact power
-    df %>%
-      dplyr::mutate(reject = stat >= crit.val) %>%
-      power(n_C = n_C, n_E = n_E, p_CA = p_CA, p_EA = p_EA) ->
+    power(
+      x_E = df$x_E,
+      x_C = df$x_C,
+      reject = df$stat >= crit.val,
+      n_C = n_C,
+      n_E = n_E,
+      p_CA = p_CA,
+      p_EA = p_EA
+    ) ->
       exact_power
   }
   
