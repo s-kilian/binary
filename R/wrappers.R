@@ -69,60 +69,35 @@
 #'   delta = -0.1,
 #'   better = "high"
 #' )
-default_test_stat <- function(delta, eff_meas, better){
+default_ts <- function(eff_meas, ...){
   if (eff_meas == "RR") {
-    return <- list(
-      fun = test_stat_FM_RR,
-      extra_args = list(
-        better = better,
-        delta = delta
-      ),
-      appr_quant_fun = stats::qnorm
+    return <- new_exbin_ts(
+      ts_fun = test_stat_FM_RR,
+      ts_fun_args = list(...),
+      quant_fun = stats::qnorm,
+      quant_fun_args = list()
     )
   }
   
   if (eff_meas == "RD") {
-    return <- list(
-      fun = test_stat_FM_RD,
-      extra_args = list(
-        better = better,
-        delta = delta
-      ),
-      appr_quant_fun = stats::qnorm
+    return <- new_exbin_ts(
+      ts_fun = test_stat_FM_RD,
+      ts_fun_args = list(...),
+      quant_fun = stats::qnorm,
+      quant_fun_args = list()
     )
   }
   
   if (eff_meas == "OR") {
-    return <- list(
-      fun = test_stat_Boschloo_OR,
-      extra_args = list(
-        better = better,
-        delta = delta
-      ),
-      appr_quant_fun = identity
+    return <- new_exbin_ts(
+      ts_fun = test_stat_Boschloo_OR,
+      ts_fun_args = list(...),
+      quant_fun = identity,
+      quant_fun_args = list()
     )
   }
   
   return(return)
-}
-# Baustelle: OOP mit S3-Klassen, siehe https://adv-r.hadley.nz/s3.html#s3-constructor
-
-# Calculate approximate quantile function of default test statistics under H0
-default_appr_test_stat_quantile <- function(
-  p,
-  eff_meas
-){
-  check.0.1(
-    values = p,
-    message = "p has to be in interval (0, 1)."
-  )
-  
-  result <- NULL
-  if(eff_meas == "RD") result <- stats::qnorm(p)
-  if(eff_meas == "RR") result <- stats::qnorm(p)
-  if(eff_meas == "OR") result <- p
-  
-  return(result)
 }
 
 # function to create grid for p_C
@@ -391,7 +366,7 @@ find_max_prob <- function(
 #' @param better "high" if higher values of x_E favor the alternative 
 #' hypothesis and "low" vice versa.
 #' @param eff_meas Specifies the effect measure. One of "RD", "RR", or "OR".
-#' @param test_stat Can be used to define a custom test statistic as a list with arguments \code{fun} and \code{extra_args}. High values favor the alternative hypothesis.
+#' @param test_stat Can be used to define a custom test statistic. Has to be an object of class "exbin_ts". See ?exbin_ts for details.
 #' @param size_acc Accuracy of grid
 #' @param calc_method "grid search" or "uniroot"
 #' 
@@ -455,23 +430,23 @@ p_value <- function(
   )
   
   # Use default test statistic if test_stat is not given
-  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
+  if(is.null(test_stat)) test_stat <- default_ts(n_E = n_E, n_C = n_C, delta = delta, eff_meas = eff_meas, better = better)
+  
+  # Update test statistic with values from function call
+  test_stat <- update.exbin_ts(test_stat, n_E = n_E, n_C = n_C, delta = delta, better = better)
   
   # data frame of all possible outcome pairs
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
   # Compute test statistic
-  df$stat <- do.call(
-    what = test_stat$fun,
-    args = c(
-      list(
-        x_E = df$x_E,
-        x_C = df$x_C,
-        n_E = n_E,
-        n_C = n_C
-      ),
-      test_stat$extra_args
-    )
+  df$stat <- calc_ts.exbin_ts(
+    ts = test_stat,
+    x_E = x_E,
+    x_C = x_C,
+    n_E = n_E,
+    n_C = n_C,
+    delta = delta,
+    better = better
   )
   
   # Compute rejection region
@@ -676,7 +651,7 @@ conf_region <- function(
   # method <- "RD"
   # delta_acc <- 2
   
-  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
+  if(is.null(test_stat)) test_stat <- default_ts(n_E = n_E, n_C = n_C, delta = delta, eff_meas = eff_meas, better = better)
 
   cr_appr_outer <- conf_region_appr(
     x_E. = x_E.,
@@ -923,17 +898,13 @@ critval <- function(
   )
   
   # Compute test statistic
-  df.stat$stat <- do.call(
-    what = test_stat$fun,
-    args = c(
-      list(
-        x_E = df.stat$x_E,
-        x_C = df.stat$x_C,
-        n_E = n_E,
-        n_C = n_C
-      ),
-      test_stat$extra_args
-    )
+  df.stat$stat <- calc_ts.exbin_ts(
+    ts = test_stat,
+    x_E = df.stat$x_E,
+    x_C = df.stat$x_C,
+    n_E = n_E,
+    n_C = n_C,
+    delta = delta
   )
 
   # Extract stat, x_C and x_E as vector and order them by stat
@@ -947,10 +918,10 @@ critval <- function(
   if(
     is.null(start_value)
     ){
-    start_value <- test_stat$appr_quant_fun(1-alpha) 
+    start_value <- calc_quant.exbin_ts(ts = test_stat, p = 1-alpha) 
   }
 
-  # If default_appr_test_stat_quantile returns NULL, take the 1-alpha quantile of the stat vector as starting value
+  # If quant_fun returns NULL, take the 1-alpha quantile of the stat vector as starting value
   if(is.null(start_value)){
     i <- ceiling(length(stat)*(1-alpha))
   } else {
@@ -990,7 +961,7 @@ critval <- function(
     
     # Find corresponding values of p_E such that (p_C, p_E) lie on the border of
     # the null hypothesis
-    p_E <- p_C.to.p_E(p_C = p_C, method = method, delta = delta)
+    p_E <- p_C.to.p_E(p_C = p_C, eff_meas = eff_meas, delta = delta)
     
     pr <- sapply(1:length(p_C), function(j)
       sum(stats::dbinom(x_C[1:i], n_C, p_C[j]) * stats::dbinom(x_E[1:i], n_E, p_E[j])) )
@@ -1030,7 +1001,6 @@ critval <- function(
     )
   }
   
-  
   return(result)
 }
 
@@ -1056,7 +1026,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   check.alpha(alpha = alpha)
   
   # Use default test statistic if test_stat is not given
-  if(is.null(test_stat)) test_stat <- default_test_stat(delta = delta, eff_meas = eff_meas, better = better)
+  if(is.null(test_stat)) test_stat <- default_ts(eff_meas = eff_meas, better = better, n_E = n_E, n_C = n_C, delta = delta)
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(
@@ -1073,26 +1043,6 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   # Use estimates as starting values
   n_C <- n_appr[["n_C"]]
   n_E <- n_appr[["n_E"]]
-  
-  # # Create data frame of all test statistics ordered by test statistic
-  # df <- expand.grid(
-  #   x_C = 0:n_C,
-  #   x_E = 0:n_E
-  # )
-  # 
-  # # Compute test statistic
-  # df$stat <- do.call(
-  #   what = test_stat$fun,
-  #   args = c(
-  #     list(
-  #       x_E = df$x_E,
-  #       x_C = df$x_C,
-  #       n_E = n_E,
-  #       n_C = n_C
-  #     ),
-  #     test_stat$extra_args
-  #   )
-  # )
   
   # Calculate critical value and generate data frame with test statistic
   crit.val.list <- critval(
@@ -1145,7 +1095,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
         test_stat = test_stat,
         delta = delta,
         size_acc = size_acc,
-        start_value = NULL
+        start_value = crit.val
       )
       crit.val <- crit.val.list[["crit.val.mid"]]
       df <- crit.val.list[["df.stat"]]
@@ -1193,7 +1143,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
       test_stat = test_stat,
       delta = delta,
       size_acc = size_acc,
-      start_value = NULL
+      start_value = crit.val
     )
     crit.val <- crit.val.list[["crit.val.mid"]]
     df <- crit.val.list[["df.stat"]]

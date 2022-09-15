@@ -5,6 +5,124 @@
 ##                Author: Samuel Kilian
 ##..............................................................................
 
+# Define class exbin_ts ####
+# Constructor
+new_exbin_ts <- function(
+  ts_fun = function(x_E, x_C){},
+  ts_fun_args = list(),
+  quant_fun = function(p){},
+  quant_fun_args = list()
+){
+  structure(
+    list(
+      ts_fun = ts_fun,
+      ts_fun_args = ts_fun_args,
+      quant_fun = quant_fun,
+      quant_fun_args = quant_fun_args
+    ),
+    class = "exbin_ts"
+  )
+}
+
+# Validator
+validate_exbin_ts <- function(ts){
+  # Check of basic properties
+  if(!is.function(ts$ts_fun) | !is.function(ts$quant_fun)) stop("ts_fun and quant_fun must be functions.")
+  if(!is.list(ts$ts_fun_args) | !is.list(ts$quant_fun_args)) stop("ts_fun_args and quant_fun_args must be lists.")
+  if(!all(c("x_E", "x_C") %in% formalArgs(ts$ts_fun))) stop("ts_fun must have arguments x_E and x_C.")
+  if(!(c("p") %in% formalArgs(ts$quant_fun))) stop("quant_fun must have argument p.")
+  
+  # Minimal example for ts_fun
+  calc_ts.exbin_ts(
+    ts = ts,
+    x_E = c(0, 0, 1, 1),
+    x_C = c(0, 1, 0, 1),
+    n_E = 2,
+    n_C = 2,
+    delta = 0,
+    better = "high"
+  ) ->
+    ts_fun_res
+  if(!is.numeric(ts_fun_res) | length(ts_fun_res) != 4) stop("ts_fun didn't produce a numeric vector of the correct length when applied to a minimal example with n_E = 2, n_C = 2, delta = 0, better = \"high\".")
+  
+  # Minimal example for quant_fun
+  calc_quant.exbin_ts(
+    ts = ts,
+    p = 0.05,
+    n_E = 2,
+    n_C = 2,
+    delta = 0,
+    better = "high"
+  ) ->
+    quant_fun_res
+  if(!(is.null(quant_fun_res) | (is.numeric(quant_fun_res) & length(quant_fun_res) == 1))) stop("quant_fun didn't produce a numeric vector of the correct length (or NULL) when applied to a minimal example with n_E = 2, n_C = 2, delta = 0, better = \"high\".")
+  
+  ts
+}
+
+# Helper
+exbin_ts <- function(ts_fun, ts_fun_args = list(), quant_fun = function(p){}, quant_fun_args = list()){
+    ts <- new_exbin_ts(
+    ts_fun = ts_fun,
+    ts_fun_args = ts_fun_args,
+    quant_fun = quant_fun,
+    quant_fun_args = quant_fun_args
+  )
+  
+  validate_exbin_ts(ts)
+}
+
+# Methods
+calc_ts.exbin_ts <- function(ts, x_E, x_C, ...){
+  # Check if x_E and x_C are vectors of non-negative integers of same length
+  check.pos.int(
+    values = c(x_E, x_C) + 1,
+    message = "x_E and x_C have to be vectors of non-negative integers."
+  )
+  if(length(x_E) != length(x_C)) stop("x_E and x_C must have equal length.")
+  
+  arguments <- list(...)
+  do.call(
+    what = ts$ts_fun,
+    args = c(
+      list(
+        x_E = x_E,
+        x_C = x_C
+      ),
+      arguments[intersect(names(arguments), formalArgs(ts$ts_fun))],   # use given arguments that are taken by ts_fun
+      ts$ts_fun_args[names(ts$ts_fun_args) %in% formalArgs(ts$ts_fun) & !(names(ts$ts_fun_args) %in% names(arguments))]
+    )
+  )
+}
+calc_quant.exbin_ts <- function(ts, p, ...){
+  # Check if p is a vector of values between 0 and 1
+  check.0.1(
+    values = p,
+    message = "p has to be a vector of values between 0 and 1."
+  )
+  
+  arguments <- list(...)
+  do.call(
+    what = ts$quant_fun,
+    args = c(
+      list(
+        p = p
+      ),
+      arguments[intersect(names(arguments), formalArgs(ts$quant_fun))],
+      ts$quant_fun_args[names(ts$quant_fun_args) %in% formalArgs(ts$quant_fun) & !(names(ts$quant_fun_args) %in% names(arguments))]
+    )
+  )
+}
+
+update.exbin_ts <- function(ts, ...){
+  arguments <- list(...)
+  ts_fun_args.to.update <- intersect(formalArgs(ts$ts_fun), names(arguments))
+  ts$ts_fun_args[ts_fun_args.to.update] <- arguments[ts_fun_args.to.update]
+  quant_fun_args.to.update <- intersect(formalArgs(ts$quant_fun), names(arguments))
+  ts$quant_fun_args <- arguments[quant_fun_args.to.update]
+  ts
+}
+
 #' Calculate Farrington-Manning RD test statistic
 #' 
 #' \code{test_stat_FM_RD} returns the value of the Farrington-Manning test statistic
@@ -33,7 +151,7 @@
 #' 
 #' @examples
 #' test_stat_FM_RD(3, 4, 10, 10, 0.2, "high")
-test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better = c("high", "low")){
+test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   p_E <- x_E / n_E
   p_C <- x_C / n_C
   
