@@ -45,24 +45,29 @@ expand.grid(
 #   calc_method = "uniroot",
 #   size_acc = size_acc
 # )
-# p_value(
-#   x_E. = 7,
-#   x_C. = 3,
-#   n_E = 10,
-#   n_C = 10,
-#   better = "high",
-#   eff_meas = "OR",
-#   delta = 1,
-#   calc_method = "uniroot",
-#   size_acc = size_acc
-# )
-# exact2x2::boschloo(
-#   x1 = 3,
-#   n1 = 10,
-#   x2 = 7,
-#   n2 = 10,
-#   alternative = "greater"
-# )
+expect_equal(
+  p_value(
+    x_E. = 7,
+    x_C. = 3,
+    n_E = 10,
+    n_C = 10,
+    better = "high",
+    eff_meas = "OR",
+    delta = 1,
+    calc_method = "uniroot",
+    size_acc = size_acc
+  )$p_max,
+  exact2x2::boschloo(
+    x1 = 3,
+    n1 = 10,
+    x2 = 7,
+    n2 = 10,
+    alternative = "greater"
+  )$p.value,
+  tolerance = 10^(-3)
+)
+
+
 
 # Test confidence region
 # conf_region(

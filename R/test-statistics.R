@@ -77,7 +77,7 @@ calc_ts.exbin_ts <- function(ts, x_E, x_C, ...){
   # Check if x_E and x_C are vectors of non-negative integers of same length
   check.pos.int(
     values = c(x_E, x_C) + 1,
-    message = "x_E and x_C have to be vectors of non-negative integers."
+    message = stop("x_E and x_C have to be vectors of non-negative integers.")
   )
   if(length(x_E) != length(x_C)) stop("x_E and x_C must have equal length.")
   
@@ -112,15 +112,6 @@ calc_quant.exbin_ts <- function(ts, p, ...){
       ts$quant_fun_args[names(ts$quant_fun_args) %in% formalArgs(ts$quant_fun) & !(names(ts$quant_fun_args) %in% names(arguments))]
     )
   )
-}
-
-update.exbin_ts <- function(ts, ...){
-  arguments <- list(...)
-  ts_fun_args.to.update <- intersect(formalArgs(ts$ts_fun), names(arguments))
-  ts$ts_fun_args[ts_fun_args.to.update] <- arguments[ts_fun_args.to.update]
-  quant_fun_args.to.update <- intersect(formalArgs(ts$quant_fun), names(arguments))
-  ts$quant_fun_args <- arguments[quant_fun_args.to.update]
-  ts
 }
 
 #' Calculate Farrington-Manning RD test statistic

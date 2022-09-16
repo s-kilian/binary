@@ -74,7 +74,7 @@ default_ts <- function(eff_meas, ...){
     return <- new_exbin_ts(
       ts_fun = test_stat_FM_RR,
       ts_fun_args = list(...),
-      quant_fun = stats::qnorm,
+      quant_fun = function(p) stats::qnorm(p),
       quant_fun_args = list()
     )
   }
@@ -83,7 +83,7 @@ default_ts <- function(eff_meas, ...){
     return <- new_exbin_ts(
       ts_fun = test_stat_FM_RD,
       ts_fun_args = list(...),
-      quant_fun = stats::qnorm,
+      quant_fun = function(p) stats::qnorm(p),
       quant_fun_args = list()
     )
   }
@@ -92,7 +92,7 @@ default_ts <- function(eff_meas, ...){
     return <- new_exbin_ts(
       ts_fun = test_stat_Boschloo_OR,
       ts_fun_args = list(...),
-      quant_fun = identity,
+      quant_fun = function(p) p,
       quant_fun_args = list()
     )
   }
@@ -243,14 +243,14 @@ find_max_prob_uniroot <- function(
 
 # function to compute probability of rejection region
 power <- function(x_E, x_C, reject, n_C, n_E, p_CA, p_EA){
-  # Take data frame df with variable x_C and x_E representing all possible
-  # response pairs for group sizes n_C and n_E and variable reject indicating
+  # Take vectors x_C and x_E representing all possible
+  # response pairs for group sizes n_C and n_E and vector reject indicating
   # whether coordinates belong to rejection region.
   # Compute exact prob. of rejection region for all pairs (p_CA, p_EA).
   
   if (
-    n_C+1 != length(unique(df$x_C)) |
-    n_E+1 != length(unique(df$x_E))
+    n_C+1 != length(unique(x_C)) |
+    n_E+1 != length(unique(x_E))
   ) {
     stop("Values of x_C and x_E have to fit n_C and n_E.")
   }
@@ -432,21 +432,14 @@ p_value <- function(
   # Use default test statistic if test_stat is not given
   if(is.null(test_stat)) test_stat <- default_ts(n_E = n_E, n_C = n_C, delta = delta, eff_meas = eff_meas, better = better)
   
-  # Update test statistic with values from function call
-  test_stat <- update.exbin_ts(test_stat, n_E = n_E, n_C = n_C, delta = delta, better = better)
-  
   # data frame of all possible outcome pairs
   df <- expand.grid(x_E = 0:n_E, x_C = 0:n_C)
   
   # Compute test statistic
   df$stat <- calc_ts.exbin_ts(
     ts = test_stat,
-    x_E = x_E,
-    x_C = x_C,
-    n_E = n_E,
-    n_C = n_C,
-    delta = delta,
-    better = better
+    x_E = df$x_E,
+    x_C = df$x_C
   )
   
   # Compute rejection region
@@ -455,7 +448,7 @@ p_value <- function(
   # Compute maximum rejection probability under H_0
   result <- find_max_prob(
     x_E = df$x_E,
-    x_C = df$X_C,
+    x_C = df$x_C,
     reject = df$reject,
     n_E = n_E,
     n_C = n_C,
@@ -464,28 +457,6 @@ p_value <- function(
     calc_method = calc_method,
     size_acc = size_acc
   )
-  
-  # df %>%
-  #   teststat(
-  #     n_E = n_E,
-  #     n_C = n_C,
-  #     delta = delta,
-  #     method = method,
-  #     better = better
-  #   ) %>%
-  #   dplyr::mutate(
-  #     reject = stat >= stat[x_E == x_E. & x_C == x_C.]
-  #   ) %>%
-  #   find_max_prob(
-  #     df = .,
-  #     n_E = n_E,
-  #     n_C = n_C,
-  #     eff_meas = eff_meas,
-  #     delta = delta,
-  #     calc_method = calc_method,
-  #     size_acc = size_acc
-  #   ) ->
-  #   result
   
   return(result)
 }
@@ -1006,7 +977,18 @@ critval <- function(
 
 # Function to calculate exact sample size
 # documentation
-samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, eff_meas, test_stat, better){
+samplesize_exact <- function(
+  p_EA,
+  p_CA,
+  delta,
+  alpha,
+  beta,
+  r,
+  size_acc = 3,
+  eff_meas,
+  test_stat = NULL,
+  better
+){
   # Calculate exact sample size for eff_meas and specified
   # level alpha, beta, allocation ratio r = n_E/n_C, true rates p_CA, p_EA and
   # NI-margin delta
@@ -1026,7 +1008,7 @@ samplesize_exact <- function(p_EA, p_CA, delta, alpha, beta, r, size_acc = 3, ef
   check.alpha(alpha = alpha)
   
   # Use default test statistic if test_stat is not given
-  if(is.null(test_stat)) test_stat <- default_ts(eff_meas = eff_meas, better = better, n_E = n_E, n_C = n_C, delta = delta)
+  if(is.null(test_stat)) test_stat <- default_ts(eff_meas = eff_meas, better = better, delta = delta)
   
   # Estimate sample size with approximate formula
   n_appr <- samplesize_appr(

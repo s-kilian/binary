@@ -22,3 +22,14 @@ arguments <- list(
   n_C = n_C,
   delta = delta
 )
+
+# p.value
+x_E. = 7
+x_C. = 3
+n_E = 10
+n_C = 10
+better = "high"
+eff_meas = "OR"
+delta = 1
+calc_method = "uniroot"
+size_acc = size_acc

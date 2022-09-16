@@ -5,61 +5,98 @@ context("Test results from literature")
 ## > Superiority #########
 ## >> Power ########
 test_that("Boschloo-Power can be reproduced", {
-# Raised nominal level and exact maximal size: According to [Boschloo, 1970],
-# the raised nominal level for sample sizes 10 and 15 and true level alpha = 0.05
-# can be chosen as approximately 0.09
-#Raise.level(0.05, 10, 15, 4)
-
-# Reject probability: According to [Boschloo, 1970], the power (reject prob.)
-# for sample size 15 in both groups and true rates p1 = 0.3 (0.6, 0.7, 0.8),
-# p0 = 0.1(0.1, 0.1, 0.2, 0.2) and alpha = 0.01 (0.05) is:
-data.frame(
-  n_E = rep(15, 8),
-  n_C = rep(15, 8),
-  p1 = rep(c(0.3, 0.6, 0.7, 0.8), 2),
-  p0 = rep(c(0.1, 0.1, 0.2, 0.2), 2),
-  alpha = rep(c(0.01, 0.05), each = 4),
-  power = c(
-    0.1493,
-    0.7394,
-    0.6796,
-    0.8723,
-    0.3531,
-    0.9189,
-    0.8962,
-    0.9744
+  # Raised nominal level and exact maximal size: According to [Boschloo, 1970],
+  # the raised nominal level for sample sizes 10 and 15 and true level alpha = 0.05
+  # can be chosen as approximately 0.09
+  #Raise.level(0.05, 10, 15, 4)
+  
+  # Reject probability: According to [Boschloo, 1970], the power (reject prob.)
+  # for sample size 15 in both groups and true rates p1 = 0.3 (0.6, 0.7, 0.8),
+  # p0 = 0.1(0.1, 0.1, 0.2, 0.2) and alpha = 0.01 (0.05) is:
+  n_E <- 15
+  n_C <- 15
+  grid <- expand.grid(
+    x_E = 0:n_E,
+    x_C = 0:n_C
   )
-) ->
-  df
-# Compute power with function power_boschloo():
-df %>%
-  dplyr::mutate(
-    power2 = as.vector(
-      sapply(
-      1:length(n_E),
-      function(i) power_boschloo(
-        df = expand.grid(
-          x_C = 0:n_C[i],
-          x_E = 0:n_E[i]
-        ) %>%
-          teststat_boschloo(n_C = n_C[i], n_E = n_E[i]) %>%
-          dplyr::mutate(
-            reject = cond_p <= critval_boschloo(alpha = alpha[i], n_C = n_C[i], n_E = n_E[i], size_acc = 3)["nom_alpha_mid"]
-          ),
-        n_C = n_C[i],
-        n_E = n_E[i],
-        p_CA = p0[i],
-        p_EA = p1[i]
+  alpha.1 <- 0.01
+  alpha.2 <- 0.05
+  eff_meas <- "OR"
+  better <- "high"
+  delta <- 1
+  ts <- default_ts(eff_meas = eff_meas, better = better)
+  ts.values <- calc_ts.exbin_ts(
+    ts = ts,
+    x_E = grid$x_E,
+    x_C = grid$x_C,
+    n_E = n_E,
+    n_C = n_C,
+    delta = delta,
+    better = better
+  )
+  critval(
+    alpha = alpha.1,
+    n_C = n_C,
+    n_E = n_E,
+    eff_meas = eff_meas,
+    test_stat = ts,
+    delta = delta,
+    size_acc = 4,
+    start_value = NULL
+  )[["crit.val.mid"]] ->
+    critval.1
+  critval(
+    alpha = alpha.2,
+    n_C = n_C,
+    n_E = n_E,
+    eff_meas = eff_meas,
+    test_stat = ts,
+    delta = delta,
+    size_acc = 4,
+    start_value = NULL
+  )[["crit.val.mid"]] ->
+    critval.2
+  data.frame(
+    n_E = rep(n_E, 8),
+    n_C = rep(n_C, 8),
+    p1 = rep(c(0.3, 0.6, 0.7, 0.8), 2),
+    p0 = rep(c(0.1, 0.1, 0.2, 0.2), 2),
+    alpha = rep(c(alpha.1, alpha.2), each = 4),
+    critval = rep(c(critval.1, critval.2), each = 4),
+    power = c(
+      0.1493,
+      0.7394,
+      0.6796,
+      0.8723,
+      0.3531,
+      0.9189,
+      0.8962,
+      0.9744
+    )
+  ) ->
+    df
+  # Compute power:
+  sapply(
+    1:nrow(df),
+    function(i){
+      power(
+        x_E = grid$x_E,
+        x_C = grid$x_C,
+        reject = ts.values > df$critval[i],
+        n_C = df$n_C[i],
+        n_E = df$n_E[i],
+        p_CA = df$p0[i],
+        p_EA = df$p1[i]
       )
-    )
-    )
-  ) -> df
-
-expect_equal(df$power, df$power2, tolerance = .001, scale = 1)
+    }
+  ) ->
+    power.2
+  
+  expect_equal(df$power, unname(power.2), tolerance = .001, scale = 1)
 
 })
 
-
+# Baustelle: Tests updaten
 ## >> Appr. sample size #######
 test_that("Approximate sample size can be reproduced", {
   
