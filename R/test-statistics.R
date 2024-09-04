@@ -274,3 +274,50 @@ test_stat_Boschloo_OR <- function(x_E, x_C, n_E, n_C, delta, better){
   return(return)
 }
 
+#' Calculate Wald RD test statistic
+#' 
+#' \code{test_stat_Wald_RD} returns the value of the Wald test statistic
+#' for non-inferiority of the risk difference between two proportions.
+#' 
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
+#' in testing the null hypothesis
+#' \mjsdeqn{H_0: p_E - p_C \le \delta ,}
+#' where the NI-margin is usually non-positive: \mjseqn{\delta \le 0}.
+#' The Wald test statistic for this hypothesis is
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\hat p_E(1 - \hat p_E)}{n_E} + \frac{\hat p_C(1 - \hat p_C)}{n_C}}},}
+#' where \mjseqn{\hat p_C} and \mjseqn{\hat p_E} are the observed rates.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' 
+#' @param x_E Vector of number of events in experimental group.
+#' @param x_C Vector of number of events in control group.
+#' @param n_E Sample size in experimental group.
+#' @param n_C Sample size in control group.
+#' @param delta Non-inferiority margin.
+#' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
+#' hypothesis and "low" vice versa.
+#' @return Vector of values of the RD test statistic.
+#' 
+#' @export
+#' 
+#' @examples
+#' test_stat_Wald_RD(3, 4, 10, 10, 0.2, "high")
+test_stat_Wald_RD <- function(x_E, x_C, n_E, n_C, delta, better){
+  p_E <- x_E / n_E
+  p_C <- x_C / n_C
+  
+  # Baustelle: continuity correction wegen Nenner = 0?
+  denom <- ifelse(
+    p_E - p_C - delta == 0,
+    1,
+    sqrt(p_E*(1-p_E)/n_E + p_C*(1-p_C)/n_C)
+  )
+  num <- p_E - p_C - delta
+  if (better == "high"){
+    return <-  num/denom
+  }
+  if (better == "low"){
+    return <- -num/denom
+  }
+  return(return)
+  
+}
