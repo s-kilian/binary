@@ -314,7 +314,7 @@ test_stat_Wald_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   
   denom <- sqrt(p_E_corr*(1-p_E_corr)/n_E_corr + p_C_corr*(1-p_C_corr)/n_C_corr)
   
-  num <- k_E/n_E - k_C/n_C - delta
+  num <- x_E/n_E - x_C/n_C - delta
   if (better == "high"){
     return <-  num/denom
   }
