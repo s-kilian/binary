@@ -278,19 +278,16 @@ test_stat_Boschloo_OR <- function(x_E, x_C, n_E, n_C, delta, better){
 #' 
 #' \code{test_stat_Wald_RD} returns the value of the modified Wald test statistic
 #' for non-inferiority of the risk difference between two proportions. The
-#' modification regards the variance estimation, i.e. the denominator of the
-#' test statistic. To avoid dividing by zero, the Haldane-Anscombe correction
-#' is used.
+#' Haldane-Anscombe correction is used to avoid problems with risks = 0, 1.
 #' 
 #' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: p_E - p_C \le \delta ,}
 #' where the NI-margin is usually non-positive: \mjseqn{\delta \le 0}.
 #' The modified Wald test statistic for this hypothesis is
-#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_E - \hat p_C - \delta}{\sqrt{\frac{\hat p_{E, mod}(1 - \hat p_{E, mod})}{n_{E, mod}} + \frac{\hat p_{C, mod}(1 - \hat p_{C, mod})}{n_{C, mod}}}},}
-#' where \mjseqn{\hat p_C} and \mjseqn{\hat p_E} are the observed rates.
-#' \mjseqn{\hat p_{i, mod} = \hat p_i + 0.5} and \mjseqn{n_{i, mod} = n_i + 1} are
-#' modified values used to avoid estimation of zero variance.
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{\hat p_{E, mod} - \hat p_{C, mod} - \delta}{\sqrt{\frac{\hat p_{E, mod}(1 - \hat p_{E, mod})}{n_{E, mod}} + \frac{\hat p_{C, mod}(1 - \hat p_{C, mod})}{n_{C, mod}}}},}
+#' where \mjseqn{n_{i, mod} = n_i + 1} and \mjseqn{\hat p_{i, mod} = \frac{x_i + 0.5}{n_{i, mod}}} are
+#' modified values used to avoid problems with risks = 0, 1.
 #' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
@@ -314,7 +311,7 @@ test_stat_Wald_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   
   denom <- sqrt(p_E_corr*(1-p_E_corr)/n_E_corr + p_C_corr*(1-p_C_corr)/n_C_corr)
   
-  num <- x_E/n_E - x_C/n_C - delta
+  num <- p_E_corr - p_C_corr - delta
   if (better == "high"){
     return <-  num/denom
   }
@@ -328,20 +325,17 @@ test_stat_Wald_RD <- function(x_E, x_C, n_E, n_C, delta, better){
 #' Calculate modified Wald RR test statistic
 #' 
 #' \code{test_stat_Wald_RR} returns the value of the modified Wald test statistic
-#' for non-inferiority of the risk ratio between two proportions. The
-#' modification regards the variance estimation, i.e. the denominator of the
-#' test statistic. To avoid dividing by zero, the Haldane-Anscombe correction
-#' is used.
+#' for non-inferiority of the risk ratio between two proportions.  The
+#' Haldane-Anscombe correction is used to avoid problems with risks = 0, 1.
 #' 
 #' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
 #' in testing the null hypothesis
 #' \mjsdeqn{H_0: p_E / p_C \le \delta ,}
 #' where the NI-margin is usually smaller than 1: \mjseqn{\delta < 1}.
 #' The modified Wald test statistic for this hypothesis is
-#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{log(\hat p_E) - log(\hat p_C) - log(\delta)}{\sqrt{\frac{1-\hat p_{E, mod}}{\hat p_{E, mod} n_{E, mod}} + \frac{1-\hat p_{C, mod}}{\hat p_{C, mod} n_{C, mod}}}},}
-#' where \mjseqn{\hat p_C} and \mjseqn{\hat p_E} are the observed rates.
-#' \mjseqn{\hat p_{i, mod} = \hat p_i + 0.5} and \mjseqn{n_{i, mod} = n_i + 1} are
-#' modified values used to avoid estimation of zero variance.
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{log(\hat p_{E, mod}) - log(\hat p_{C, mod}) - log(\delta)}{\sqrt{\frac{1-\hat p_{E, mod}}{\hat p_{E, mod} n_{E, mod}} + \frac{1-\hat p_{C, mod}}{\hat p_{C, mod} n_{C, mod}}}},}
+#' where \mjseqn{n_{i, mod} = n_i + 1} and \mjseqn{\hat p_{i, mod} = \frac{x_i + 0.5}{n_{i, mod}}} are
+#' modified values used to avoid problems with risks = 0, 1.
 #' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
 #' 
 #' @param x_E Vector of number of events in experimental group.
@@ -351,7 +345,7 @@ test_stat_Wald_RD <- function(x_E, x_C, n_E, n_C, delta, better){
 #' @param delta Non-inferiority margin.
 #' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
 #' hypothesis and "low" vice versa.
-#' @return Vector of values of the RD test statistic.
+#' @return Vector of values of the RR test statistic.
 #' 
 #' @export
 #' 
@@ -365,7 +359,57 @@ test_stat_Wald_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   
   denom <- sqrt((1-p_E_corr)/(n_E_corr*p_E_corr) + (1-p_C_corr)/(n_C_corr*p_C_corr))
   
-  num <- log(x_E/n_E) - log(x_C/n_C) - log(delta)
+  num <- log(p_E_corr) - log(p_C_corr) - log(delta)
+  if (better == "high"){
+    return <-  num/denom
+  }
+  if (better == "low"){
+    return <- -num/denom
+  }
+  return(return)
+  
+}
+
+#' Calculate modified Wald OR test statistic
+#' 
+#' \code{test_stat_Wald_OR} returns the value of the modified Wald test statistic
+#' for non-inferiority of the odds ratio between two proportions. The
+#' modification regards the variance estimation, i.e. the denominator of the
+#' test statistic. To avoid dividing by zero, the Haldane-Anscombe correction
+#' is used.
+#' 
+#' If higher values of \mjseqn{x_E} favor the alternative hypothesis, we are interested
+#' in testing the null hypothesis
+#' \mjsdeqn{H_0: p_E/(1-p_E) / (p_C/(1-p_C)) \le \delta ,}
+#' where the NI-margin is usually smaller than 1: \mjseqn{\delta < 1}.
+#' The modified Wald test statistic for this hypothesis is
+#' \mjsdeqn{T_{\delta}(x_E, x_C) = \frac{log(\hat p_{E, mod}) - log(1 - \hat p_{E, mod}) - log(\hat p_{C, mod}) + log(1 - \hat p_{C, mod}) - log(\delta)}{\sqrt{\frac{1}{n_{E, mod} \hat p_{E, mod} (1 - \hat p_{E, mod}) } + \frac{1}{n_{C, mod} \hat p_{C, mod} (1 - \hat p_{C, mod}) }}},}
+#' where \mjseqn{n_{i, mod} = n_i + 1} and \mjseqn{\hat p_{i, mod} = \frac{x_i + 0.5}{n_{i, mod}}} are
+#' modified values used to avoid problems with risks = 0, 1.
+#' High values of \mjseqn{T_{\delta}} favor the alternative hypothesis.
+#' 
+#' @param x_E Vector of number of events in experimental group.
+#' @param x_C Vector of number of events in control group.
+#' @param n_E Sample size in experimental group.
+#' @param n_C Sample size in control group.
+#' @param delta Non-inferiority margin.
+#' @param better "high" if higher values of \mjseqn{x_E} favor the alternative 
+#' hypothesis and "low" vice versa.
+#' @return Vector of values of the OR test statistic.
+#' 
+#' @export
+#' 
+#' @examples
+#' test_stat_Wald_OR(3, 4, 10, 10, 0.2, "high")
+test_stat_Wald_OR <- function(x_E, x_C, n_E, n_C, delta, better){
+  n_E_corr <- n_E + 1
+  n_C_corr <- n_C + 1
+  p_E_corr <- (x_E + 0.5) / n_E_corr
+  p_C_corr <- (x_C + 0.5) / n_C_corr
+  
+  denom <- sqrt(1/(n_E_corr*p_E_corr*(1-p_E_corr)) + 1/(n_C_corr*p_C_corr*(1-p_C_corr)))
+  
+  num <- log(p_E_corr) - log(1 - p_E_corr) - log(p_C_corr) + log(1 - p_C_corr) - log(delta)
   if (better == "high"){
     return <-  num/denom
   }
