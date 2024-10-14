@@ -72,7 +72,7 @@ exbin_ts <- function(ts_fun, ts_fun_args = list(), quant_fun = function(p){}, qu
   validate_exbin_ts(ts)
 }
 
-# Methods
+# Methods ####
 calc_ts.exbin_ts <- function(ts, x_E, x_C, ...){
   # Check if x_E and x_C are vectors of non-negative integers of same length
   check.pos.int(
@@ -114,6 +114,17 @@ calc_quant.exbin_ts <- function(ts, p, ...){
   )
 }
 
+# Generics ####
+calc_ts <- function(x){
+  UseMethod("calc_ts")
+}
+
+calc_quant <- function(x){
+  UseMethod("calc_quant")
+}
+
+# Test statistics ####
+
 #' Calculate Farrington-Manning RD test statistic
 #' 
 #' \code{test_stat_FM_RD} returns the value of the Farrington-Manning test statistic
@@ -143,16 +154,14 @@ calc_quant.exbin_ts <- function(ts, p, ...){
 #' @examples
 #' test_stat_FM_RD(3, 4, 10, 10, 0.2, "high")
 test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better){
+
+  theta <- n_C / n_E
   p_E <- x_E / n_E
   p_C <- x_C / n_C
-  
-  theta <- n_C / n_E
-  p1hat <- x_E / n_E
-  p2hat <- x_C / n_C
   a <- 1 + theta
-  b <- -(1 + theta + p1hat + theta * p2hat + delta * (theta + 2))
-  c <- delta^2 + delta * (2*p1hat + theta + 1) + p1hat + theta * p2hat
-  d <- - p1hat * delta * (1 + delta)
+  b <- -(1 + theta + p_E + theta * p_C + delta * (theta + 2))
+  c <- delta^2 + delta * (2*p_E + theta + 1) + p_E + theta * p_C
+  d <- - p_E * delta * (1 + delta)
   # Define the parameters for solving the equation
   v <- b^3/(3*a)^3 - b*c/(6*a^2) + d/(2*a)
   u <- sign(v) * sqrt(b^2/(3*a)^2 - c/(3*a))
@@ -203,15 +212,13 @@ test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better){
 #' @examples
 #' test_stat_FM_RR(3, 4, 10, 10, 0.2, "high")
 test_stat_FM_RR <- function(x_E, x_C, n_E, n_C, delta, better){
+
+  theta <- n_C / n_E
   p_E <- x_E / n_E
   p_C <- x_C / n_C
-  
-  theta <- n_C / n_E
-  p1hat <- x_E / n_E
-  p2hat <- x_C / n_C
   a <- 1 + theta
-  b <- -(delta*(1 + theta*p2hat) + theta + p1hat)
-  c <- delta * (p1hat + theta * p2hat)
+  b <- -(delta*(1 + theta*p_C) + theta + p_E)
+  c <- delta * (p_E + theta * p_C)
   # Define the solution
   p_E0 <- (-b - sqrt(round(b^2 - 4*a*c,10)))/(2*a)
   p_C0 <- round(p_E0 / delta, 10)
