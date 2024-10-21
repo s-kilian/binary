@@ -377,6 +377,24 @@ test_stat_Wald_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   
 }
 
+test_stat_FM_RR_2 <- function(x_E, x_C, n_E, n_C, delta, better){
+  
+  n_E_corr <- n_E + 1
+  n_C_corr <- n_C + 1
+  p_E_corr <- (x_E + 0.5) / n_E_corr
+  p_C_corr <- (x_C + 0.5) / n_C_corr
+  
+  denom <- ifelse(p_E - delta * p_C == 0, 1, sqrt(round(p_E_corr*(1-p_E_corr)/n_E_corr + p_C_corr*(1-p_C_corr)*delta^2/n_C_corr, 10)))
+  num <- p_E_corr - delta * p_C_corr
+  if (better == "high"){
+    return <- num/denom
+  }
+  if (better == "low"){
+    return <- -num/denom
+  }
+  return(return)
+}
+
 #' Calculate modified Wald OR test statistic
 #' 
 #' \code{test_stat_Wald_OR} returns the value of the modified Wald test statistic
