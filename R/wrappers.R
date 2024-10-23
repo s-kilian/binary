@@ -872,10 +872,7 @@ critval <- function(
   df.stat$stat <- calc_ts.exbin_ts(
     ts = test_stat,
     x_E = df.stat$x_E,
-    x_C = df.stat$x_C,
-    n_E = n_E,
-    n_C = n_C,
-    delta = delta
+    x_C = df.stat$x_C
   )
 
   # Extract stat, x_C and x_E as vector and order them by stat
