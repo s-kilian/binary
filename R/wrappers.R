@@ -129,6 +129,22 @@ p_C.to.p_E <- function(p_C, eff_meas, delta){
   return(p_E)
 }
 
+# function to compute p_C from p_E and NI-margin delta s.t. effect(p_E, p_C) = delta
+p_E.to.p_C <- function(p_E, eff_meas, delta){
+  
+  if (eff_meas == "RR") {
+    p_C <- p_E / delta
+  }
+  if (eff_meas == "RD") {
+    p_C <- p_E - delta
+  }
+  if (eff_meas == "OR") {
+    p_C <- 1/(1+(1-p_E)/(p_E/delta))
+  }
+  
+  return(p_C)
+}
+
 # function to compute derivation (d p_E)/(d p_C) from p_C and NI-margin delta
 d.p_E.p_C <- function(p_C, eff_meas, delta){
   
@@ -397,8 +413,8 @@ p_value <- function(
   
   # Check if input is correctly specified
   check.pos.int(
-    size_acc,
-    "size_acc has to be positive integer."
+    size_acc+1,
+    "size_acc has to be non-negative integer."
   )
   check.pos.int(
     c(x_E.+1, x_C.+1, n_E, n_C, n_E-x_E.+1, n_C-x_C.+1),
