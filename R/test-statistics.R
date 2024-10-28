@@ -171,7 +171,7 @@ test_stat_FM_RD <- function(x_E, x_C, n_E, n_C, delta, better){
   p_C0 <- round(p_E0 - delta, 10)                  # round eingebaut aus gleichem Grund wie oben.
   
   denom <- ifelse(p_E - p_C - delta == 0, 1, sqrt(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)/n_C))
-  num <- p_E - p_C - delta
+  num <- round(p_E - p_C - delta, 10)               # round eingebaut, damit Test statistik == 0 auch ausgegeben wird
   if (better == "high"){
     return <-  num/denom
   }
@@ -224,7 +224,7 @@ test_stat_FM_RR <- function(x_E, x_C, n_E, n_C, delta, better){
   p_C0 <- round(p_E0 / delta, 10)
   
   denom <- ifelse(p_E - delta * p_C == 0, 1, sqrt(round(p_E0*(1-p_E0)/n_E + p_C0*(1-p_C0)*delta^2/n_C, 10)))
-  num <- p_E - delta * p_C
+  num <- round(p_E - delta * p_C, 10)               # round eingebaut, damit Test statistik == 0 auch ausgegeben wird
   if (better == "high"){
     return <- num/denom
   }
